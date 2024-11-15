@@ -1,4 +1,6 @@
+
 # ServerSeekerV2
+[![88x31](https://odpay.net/88x31.gif)](https://odpay.net)
 
 ServerSeekerV2 is a full rewrite of the original ServerSeeker in Java, it takes a JSON output file from [masscan](https://github.com/robertdavidgraham/masscan).  
 Using that as input it asynchronously pings each IP address, on the port returned with a [Server List Ping](https://wiki.vg/Server_List_Ping) which returns the servers information, this information then gets stored in a PostgreSQL database.
