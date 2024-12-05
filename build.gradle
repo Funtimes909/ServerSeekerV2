@@ -15,12 +15,17 @@ dependencies {
     testImplementation platform("org.junit:junit-bom:5.10.0")
     testImplementation("org.junit.jupiter:junit-jupiter")
 
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.apache.commons:commons-dbcp2:2.12.0")
     implementation("ch.qos.logback:logback-classic:1.5.12")
+
+    // Postgres (SQL database)
+    implementation("org.postgresql:postgresql:42.7.4")
+    // Json
+    implementation("com.google.code.gson:gson:2.11.0")
     // Encryption
     implementation("org.bouncycastle:bcutil-jdk18on:1.79")
+    // Networking
+    implementation("io.netty:netty-all:4.1.115.Final")
 
     // Progress bars
     implementation("me.tongfei:progressbar:0.10.1")
