@@ -11,8 +11,6 @@ import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Compression
 import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Disconnect;
 import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Encryption;
 import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.LoginSuccess;
-import xyz.funtimes909.serverseekerv2.types.varlen.VarInt;
-import xyz.funtimes909.serverseekerv2.util.PacketFormatter;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -33,7 +31,7 @@ public class Login {
     // The default username & uuid to attempt to login to servers if none is given
     public static final String username = "Herobrine";
     public static final UUID uuid = UUID.fromString("f84c6a79-0a4e-45e0-879b-cd49ebd4c4e2");
-    public static final List<Byte> REQUEST = PacketFormatter.encodePacket(0, username, uuid);
+//    public static final List<Byte> REQUEST = PacketFormatter.encodePacket(0, username, uuid);
 
     // NOTE: This is only for testing. Once deployed, the BC provider will be added in the main function
     static {
@@ -62,11 +60,13 @@ public class Login {
      * A test login function. SHOULD NOT BE USED IN PRODUCTION
      */
     public static Login login(String ip, short port) {
+        throw new RuntimeException("Not implemented yet");
+        /*
         int protocol = 0;
 
         // First ping the server to get the protocol version
         try (Socket so = Connect.connect(ip, port)) {
-            String status = Handshake.ping(so);
+            String status = Status.ping(so);
             JsonObject pingJson = JsonParser.parseString(status).getAsJsonObject();
             protocol = pingJson.get("version").getAsJsonObject().get("protocol").getAsInt();
         } catch (Exception ignored) {}
@@ -86,9 +86,11 @@ public class Login {
         } catch (Exception ignored) {}
 
         return null;
+         */
     }
 
 
+    /*
     public void login(int protocol)
             throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchPaddingException, IOException, BadPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException {
         login(protocol, REQUEST, "");
@@ -97,9 +99,12 @@ public class Login {
             throws InvalidAlgorithmParameterException, IllegalBlockSizeException, NoSuchPaddingException, IOException, BadPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException {
         login(protocol, PacketFormatter.encodePacket(0, username, uuid), accessToken);
     }
+    */
     public void login(int protocol, List<Byte> loginRequest, String accessToken)
             throws IllegalBlockSizeException, IOException, BadPaddingException, NoSuchAlgorithmException, NoSuchPaddingException, NoSuchProviderException, InvalidAlgorithmParameterException, InvalidKeyException
     {
+        throw new RuntimeException("Not implemented yet");
+        /*
         // The login request starts off with the Handshake and Login Start
         // TODO: Add a way to give the IP & Port used for the handshake protocol
         List<Byte> request = PacketFormatter.encodePacket(0, // Handshake Protocol
@@ -152,7 +157,7 @@ public class Login {
                     serverEncryptCipher.init(Cipher.ENCRYPT_MODE, encryptionPacket.publicKey);
 
 
-                    /* ========== Create the response packet ========== */
+                    // ========== Create the response packet ========== //
                     // TODO: Move this out of here
                     ArrayList<Byte> encryptionResponse = new ArrayList<>();
                     // Protocol
@@ -183,6 +188,7 @@ public class Login {
                 case null, default -> { }
             }
         }
+        */
     }
 
 

@@ -1,10 +1,10 @@
 package xyz.funtimes909.serverseekerv2.types.protocols.login.incoming;
 
+import io.netty.buffer.ByteBuf;
 import org.bouncycastle.jcajce.provider.asymmetric.rsa.BCRSAPublicKey;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 import xyz.funtimes909.serverseekerv2.types.protocols.AbstractProtocol;
-import xyz.funtimes909.serverseekerv2.types.varlen.VarByteArray;
-import xyz.funtimes909.serverseekerv2.types.varlen.VarString;
 
 import java.security.KeyFactory;
 import java.security.spec.X509EncodedKeySpec;
@@ -28,28 +28,21 @@ public class Encryption implements AbstractProtocol<Encryption> {
     }
 
 
-    public static Encryption decode(byte[] in) {
+    public static Encryption decode(ByteBuf in) {
         try {
-            int pointer = 1;
-
-            VarString serverID = VarString.decode(in, pointer);
-            pointer += serverID.getSize();
-
-            VarByteArray publicKey = VarByteArray.decode(in, pointer);
-            pointer += publicKey.getSize();
-
-            VarByteArray verifyToken = VarByteArray.decode(in, pointer);
-            pointer += verifyToken.getSize();
+            String serverID = PacketTypes.String.read(in);
+            byte[] publicKey = PacketTypes.ByteArray.read(in).array();
+            byte[] verifyToken = PacketTypes.ByteArray.read(in).array();
 
             KeyFactory keyFactory = KeyFactory.getInstance("X.509", BouncyCastleProvider.PROVIDER_NAME);
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKey.get());
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicKey);
             BCRSAPublicKey serverPublicKey = (BCRSAPublicKey) keyFactory.generatePublic(keySpec);
 
             return new Encryption(
-                    serverID.get(),
+                    serverID,
                     serverPublicKey,
-                    verifyToken.get(),
-                    in[pointer] == 1
+                    verifyToken,
+                    in.readByte() == 1
             );
         } catch (Exception ignored) { }
         return new Encryption();

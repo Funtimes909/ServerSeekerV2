@@ -1,6 +1,10 @@
 package xyz.funtimes909.serverseekerv2.network;
 
-import xyz.funtimes909.serverseekerv2.types.varlen.VarInt;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -9,40 +13,39 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.zip.InflaterOutputStream;
 
 public class PacketUtils {
-    public static byte[] readStream(InputStream io) throws IOException {
-        return readStream(io, -1);
+    private static final Logger log = LoggerFactory.getLogger(PacketUtils.class);
+
+    public static ByteBuf read(ByteBuf in) throws IOException {
+        return read(in, -1);
     }
-    public static byte[] readStream(InputStream io, int compressionThreshold) throws IOException {
-        int packetSize = VarInt.decode(io);
-        byte[] packet = io.readNBytes(packetSize);
+    public static ByteBuf read(ByteBuf in, int compressionThreshold) throws IOException {
+        ByteBuf packet = PacketTypes.ByteArray.read(in);
         return decompressPacket(packet, compressionThreshold);
     }
 
 
 
-    public static byte[] decompressPacket(byte[] packet, int compressionThreshold) throws IOException {
+    public static ByteBuf decompressPacket(ByteBuf in, int compressionThreshold) throws IOException {
         if (compressionThreshold == -1) // If it isn't enabled
-            return packet;
+            return in;
 
         // Then see how large it would be
-        VarInt dataSize = VarInt.decode(packet, 0);
-        byte[] newPacket = Arrays.copyOfRange(packet, dataSize.getSize(), packet.length);
+        int size = PacketTypes.VarInt.read(in);
         // If the packet is too small, then you don't need to decompress
-        if (dataSize.get() < compressionThreshold)
-            return newPacket;
+        if (size < compressionThreshold)
+            return in;
 
         // Now we try to de-compress
+        // TODO: Find a more Netty compatible way of doing this
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         try (OutputStream ios = new InflaterOutputStream(os)) {
-            ios.write(newPacket);
+            ios.write(in.readBytes(size).array());
         }
-        return os.toByteArray();
+        return Unpooled.copiedBuffer(os.toByteArray());
     }
 
 
@@ -65,27 +68,28 @@ public class PacketUtils {
     public static List<byte[]> readEncryptedStream(InputStream io, Cipher cipher, int compressionThreshold)
             throws IOException, IllegalBlockSizeException, BadPaddingException
     {
-        List<byte[]> result = new ArrayList<>();
-        byte[] encryptedPacket = io.readAllBytes();
-        byte[] packet = cipher.doFinal(encryptedPacket);
-
-        int packetStartIndex = 0;
-
-        while (packetStartIndex < packet.length) {
-            VarInt packetSize = VarInt.decode(packet, packetStartIndex);
-            packetStartIndex += packetSize.get() + packetSize.getSize() + 1;
-            result.add(
-                    decompressPacket(
-                            Arrays.copyOfRange(
-                                    packet,
-                                    packetStartIndex - packetSize.get() - 1,
-                                    packetStartIndex - 1
-                            ),
-                            compressionThreshold
-                    )
-            );
-        }
-
-        return result;
+//        List<byte[]> result = new ArrayList<>();
+//        byte[] encryptedPacket = io.readAllBytes();
+//        byte[] packet = cipher.doFinal(encryptedPacket);
+//
+//        int packetStartIndex = 0;
+//
+//        while (packetStartIndex < packet.length) {
+//            VarInt packetSize = VarInt.decode(packet, packetStartIndex);
+//            packetStartIndex += packetSize.get() + packetSize.getSize() + 1;
+//            result.add(
+//                    decompressPacket(
+//                            Arrays.copyOfRange(
+//                                    packet,
+//                                    packetStartIndex - packetSize.get() - 1,
+//                                    packetStartIndex - 1
+//                            ),
+//                            compressionThreshold
+//                    )
+//            );
+//        }
+//
+//        return result;
+        throw new RuntimeException("Reading encrypted streams not done yet");
     }
 }

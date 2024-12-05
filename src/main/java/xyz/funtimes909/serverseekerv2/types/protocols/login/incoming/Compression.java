@@ -1,7 +1,8 @@
 package xyz.funtimes909.serverseekerv2.types.protocols.login.incoming;
 
+import io.netty.buffer.ByteBuf;
+import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 import xyz.funtimes909.serverseekerv2.types.protocols.AbstractProtocol;
-import xyz.funtimes909.serverseekerv2.types.varlen.VarInt;
 
 public class Compression implements AbstractProtocol<Compression> {
     public static final AbstractProtocol<?> INSTANCE = new Compression();
@@ -17,9 +18,9 @@ public class Compression implements AbstractProtocol<Compression> {
     }
 
 
-    public static Compression decode(byte[] in) {
+    public static Compression decode(ByteBuf in) {
         return new Compression(
-                VarInt.decode(in, 1).get()
+                PacketTypes.VarInt.read(in)
         );
     }
 }

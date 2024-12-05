@@ -13,7 +13,7 @@ import xyz.funtimes909.serverseekerv2.builders.Player;
 import xyz.funtimes909.serverseekerv2.builders.Server;
 import xyz.funtimes909.serverseekerv2.network.Connect;
 import xyz.funtimes909.serverseekerv2.network.HttpUtils;
-import xyz.funtimes909.serverseekerv2.network.protocols.Handshake;
+import xyz.funtimes909.serverseekerv2.network.protocols.Status;
 import xyz.funtimes909.serverseekerv2.network.protocols.QuickLogin;
 import xyz.funtimes909.serverseekerv2.types.LoginAttempt;
 import xyz.funtimes909.serverseekerv2.types.ServerType;
@@ -57,9 +57,11 @@ public class ScanManager {
                     String ip = server.ip();
                     short port = server.ports().getFirst().port();
 
+                    // FIXME[NETTY]: Rewrite this part
                     JsonObject parsedJson;
                     try (Socket so = Connect.connect(ip, port)) {
-                        String json = Handshake.ping(so);
+//                        String json = Status.ping(so);
+                        String json = "";
                         parsedJson = JsonParser.parseString(json).getAsJsonObject();
                     }
                     if (parsedJson == null) return;

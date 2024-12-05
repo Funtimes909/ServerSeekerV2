@@ -6,8 +6,6 @@ import com.google.gson.JsonParser;
 import xyz.funtimes909.serverseekerv2.network.Connect;
 import xyz.funtimes909.serverseekerv2.network.PacketUtils;
 import xyz.funtimes909.serverseekerv2.types.LoginAttempt;
-import xyz.funtimes909.serverseekerv2.types.varlen.VarInt;
-import xyz.funtimes909.serverseekerv2.util.PacketFormatter;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,20 +13,23 @@ import java.net.Socket;
 import java.util.List;
 
 public class QuickLogin {
-    private static final List<Byte> loginPacketSuffix;
+//    private static final List<Byte> loginPacketSuffix;
     static {
-        List<Byte> ba = PacketFormatter.encode(
-                "", // Server Address
-                (short) 0, // Port
-                (byte) 2 // Next State (1: status, 2: login, 3: transfer)
-        );
-        // Login Request
-        ba.addAll(Login.REQUEST);
-        loginPacketSuffix = ba;
+//        List<Byte> ba = PacketFormatter.encode(
+//                "", // Server Address
+//                (short) 0, // Port
+//                (byte) 2 // Next State (1: status, 2: login, 3: transfer)
+//        );
+//        // Login Request
+//        ba.addAll(Login.REQUEST);
+//        loginPacketSuffix = ba;
     }
 
     /** A really rudimentary login method that can check some basic stats about the server */
     public static LoginAttempt quickLogin(Socket so, int protocol) {
+        throw new RuntimeException("Not implemented yet");
+
+        /*
         try (
                 OutputStream out = so.getOutputStream();
                 InputStream in = so.getInputStream();
@@ -74,18 +75,21 @@ public class QuickLogin {
             }
         } catch (Exception ignored) { }
         return LoginAttempt.UNKNOWN;
+        */
     }
 
 
 
     public static void main(String[] args) {
+        throw new RuntimeException("Not implemented yet");
+        /*
         String ip = "127.0.0.1";
         int port = 25565;
         int protocol = 0;
 
         // First ping the server to get the protocol version
         try (Socket so = Connect.connect(ip, port)) {
-            String status = Handshake.ping(so);
+            String status = Status.ping(so);
             JsonObject pingJson = JsonParser.parseString(status).getAsJsonObject();
             protocol = pingJson.get("version").getAsJsonObject().get("protocol").getAsInt();
         } catch (Exception ignored) {}
@@ -93,5 +97,6 @@ public class QuickLogin {
         try (Socket so = Connect.connect(ip, port)) {
             System.out.println(quickLogin(so, protocol));
         } catch (Exception ignored) {}
+         */
     }
 }
