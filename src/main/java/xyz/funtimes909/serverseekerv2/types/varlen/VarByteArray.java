@@ -1,5 +1,6 @@
 package xyz.funtimes909.serverseekerv2.types.varlen;
 
+import io.netty.buffer.ByteBuf;
 import xyz.funtimes909.serverseekerv2.util.PacketFormatter;
 
 import java.util.Arrays;
@@ -36,5 +37,17 @@ public class VarByteArray extends AbstractVarType<byte[], VarByteArray> {
     @Override
     public List<Byte> encodeValue(Object in) {
         return encode((byte[]) in);
+    }
+
+
+
+
+    public static ByteBuf read(ByteBuf in) {
+        int size = VarInt.read(in);
+        return in.readBytes(size);
+    }
+    public static void write(ByteBuf out, byte[] val) {
+        VarInt.write(out, val.length);
+        out.writeBytes(val);
     }
 }

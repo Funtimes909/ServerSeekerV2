@@ -15,6 +15,17 @@ import java.util.List;
 import java.util.zip.InflaterOutputStream;
 
 public class PacketUtils {
+    public static byte[] readStream(InputStream io) throws IOException {
+        return readStream(io, -1);
+    }
+    public static byte[] readStream(InputStream io, int compressionThreshold) throws IOException {
+        int packetSize = VarInt.decode(io);
+        byte[] packet = io.readNBytes(packetSize);
+        return decompressPacket(packet, compressionThreshold);
+    }
+
+
+
     public static byte[] decompressPacket(byte[] packet, int compressionThreshold) throws IOException {
         if (compressionThreshold == -1) // If it isn't enabled
             return packet;
@@ -32,16 +43,6 @@ public class PacketUtils {
             ios.write(newPacket);
         }
         return os.toByteArray();
-    }
-
-
-    public static byte[] readStream(InputStream io) throws IOException {
-        return readStream(io, -1);
-    }
-    public static byte[] readStream(InputStream io, int compressionThreshold) throws IOException {
-        int packetSize = VarInt.decode(io);
-        byte[] packet = io.readNBytes(packetSize);
-        return decompressPacket(packet, compressionThreshold);
     }
 
 

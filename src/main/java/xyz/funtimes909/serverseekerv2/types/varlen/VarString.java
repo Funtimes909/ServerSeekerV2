@@ -1,5 +1,6 @@
 package xyz.funtimes909.serverseekerv2.types.varlen;
 
+import io.netty.buffer.ByteBuf;
 import xyz.funtimes909.serverseekerv2.util.PacketFormatter;
 
 import java.nio.charset.StandardCharsets;
@@ -36,5 +37,16 @@ public class VarString extends AbstractVarType<String, VarString> {
     @Override
     public List<Byte> encodeValue(Object in) {
         return encode((String) in);
+    }
+
+
+
+
+    public static String read(ByteBuf in) {
+        int size = VarInt.read(in);
+        return in.readCharSequence(size, StandardCharsets.UTF_8).toString();
+    }
+    public static void write(ByteBuf out, String val) {
+        VarByteArray.write(out, val.getBytes(StandardCharsets.UTF_8));
     }
 }
