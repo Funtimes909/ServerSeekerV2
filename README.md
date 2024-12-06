@@ -1,7 +1,7 @@
 # ServerSeekerV2
 
 ServerSeekerV2 is a full rewrite of the original ServerSeeker in Java, it reads output from [masscan](https://github.com/robertdavidgraham/masscan).  
-Using that as input it asynchronously pings each IP address, on the port returned with a [Server List Ping](https://wiki.vg/Server_List_Ping) which returns the servers information, this information then gets stored in a PostgreSQL database.
+Using that as input it asynchronously pings each IP address, on the port returned with a [Server List Ping](https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Server_List_Ping) which returns the servers information, this information then gets stored in a PostgreSQL database.
 
 If enabled in the config, it will also attempt to log in to that server and report if its whitelisted or cracked
 
@@ -61,4 +61,4 @@ Then put the new password in the `config.json` file.
 
 ## Special thanks
 - [EngurRuzgar](https://github.com/EngurRuzgar): Documentation and providing me with valid testing servers, maintaining the [Python API](https://github.com/Funtimes909/ServerSeekerV2-PyAPI)
-- [coolGi](https://github.com/coolGi69): Code cleanup and general tips
+- [coolGi](https://coolgi.dev/): Code cleanup and general tips

@@ -6,16 +6,17 @@ import java.net.Socket;
 
 public class QuickLogin {
 //    private static final List<Byte> loginPacketSuffix;
-    static {
-//        List<Byte> ba = PacketFormatter.encode(
+//    static {
+//        loginPacketSuffix = PacketFormatter.encode(
 //                "", // Server Address
 //                (short) 0, // Port
 //                (byte) 2 // Next State (1: status, 2: login, 3: transfer)
 //        );
-//        // Login Request
-//        ba.addAll(Login.REQUEST);
-//        loginPacketSuffix = ba;
-    }
+//    }
+//    private static final List<Byte> idAndUsername = PacketFormatter.encode(
+//            (byte) 0, // Packet ID (all versions use 0)
+//            Login.username // Username
+//    );
 
     /** A really rudimentary login method that can check some basic stats about the server */
     public static LoginAttempt quickLogin(Socket so, int protocol) {
@@ -30,7 +31,25 @@ public class QuickLogin {
             List<Byte> request = VarInt.encode(protocol); // Minecraft Protocol Version
             request.addAll(loginPacketSuffix); // The rest of the packet
             request.addFirst((byte) 0); // Protocol ID
-            request.addAll(0, VarInt.encode(request.size() - Login.REQUEST.size())); // Rest of the packet
+            request.addAll(0, VarInt.encode(request.size())); // Packet size
+
+            if (protocol >= 764) { // 1.20.2 (to latest)
+                request.addAll(Login.REQUEST); // Modern login request
+            } else if (protocol >= 761) { // 1.19.3 (to 1.20.1)
+                request.addAll(VarInt.encode(idAndUsername.size() + 1)); // Size
+                request.addAll(idAndUsername); // ID & Username
+                request.add((byte) 0x00); // Weather the uuid is encoded (we get a smaller packet if we don't ;)
+            } else if (protocol >= 759) { // 1.19 (to 1.19.2)
+                request.addAll(VarInt.encode(idAndUsername.size() + 1 + (protocol == 760? 1: 0))); // Size
+                request.addAll(idAndUsername); // ID & Username
+                request.add((byte) 0x00); // Weather we should encode lots of random stuff (don't bother)
+
+                if (protocol == 760) // 1.19.2
+                    request.add((byte) 0x00); // Weather we should encode the uuid (smaller if we don't)
+            } else {
+                request.addAll(VarInt.encode(idAndUsername.size())); // Size
+                request.addAll(idAndUsername); // ID & Username
+            }
             // Write the things to the server
             out.write(Bytes.toArray(request));
 
@@ -48,13 +67,10 @@ public class QuickLogin {
                     case 0: return LoginAttempt.ONLY_WHITELIST;
                     // Encryption
                     case 1: {
-                        if (protocol >= 766) {
-                            // In 1.20.5 they allowed having encryption and online status to be separate things
-                            return
-                                    // The final byte (bool) represents weather it's in online or offline mode (client auth?)
-                                    packet[packet.length - 1] == 1 ?
-                                            LoginAttempt.ONLINE :
-                                            LoginAttempt.OFFLINE;
+                        if (protocol >= 766 && packet[packet.length - 1] != 1) {
+                            // In 1.20.5 they allowed having encryption and online status to be separate things,
+                            // so now the final byte (bool) represents weather it's in online or offline mode (client auth?)
+                            return LoginAttempt.OFFLINE;
                         }
                         // Else it is expected that encryption means the server is in online mode
                         return LoginAttempt.ONLINE;
@@ -81,7 +97,7 @@ public class QuickLogin {
 
         // First ping the server to get the protocol version
         try (Socket so = Connect.connect(ip, port)) {
-            String status = Status.ping(so);
+            String status = Handshake.ping(so);
             JsonObject pingJson = JsonParser.parseString(status).getAsJsonObject();
             protocol = pingJson.get("version").getAsJsonObject().get("protocol").getAsInt();
         } catch (Exception ignored) {}
