@@ -9,6 +9,7 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.ReferenceCountUtil;
+import xyz.funtimes909.serverseekerv2.Main;
 import xyz.funtimes909.serverseekerv2.network.Connect;
 import xyz.funtimes909.serverseekerv2.network.PacketUtils;
 import xyz.funtimes909.serverseekerv2.types.PacketTypes;
@@ -45,12 +46,6 @@ public class Status extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-//        while (REQUEST.isReadable())
-//            System.out.println(REQUEST.readByte());
-//        REQUEST.setIndex(0, 0);
-//        System.out.println(Arrays.toString(REQUEST.array()));
-
-//        REQUEST.setIndex(0, 0);
         ctx.writeAndFlush(REQUEST.copy());
     }
 
@@ -61,31 +56,21 @@ public class Status extends ChannelInboundHandlerAdapter {
             int protocol = PacketTypes.VarInt.read(in);
             String json = PacketTypes.String.read(in);
             System.out.println(json);
-
-
-//            ByteBuf in = (ByteBuf) msg;
-//            int size = PacketTypes.VarInt.read(in);
-//            ByteBuf packet = in.readBytes(size);
-//            int packetType = PacketTypes.VarInt.read(packet);
-//            String json = PacketTypes.String.read(packet);
-//            System.out.println(json);
         } finally {
             ctx.close();
-//            ReferenceCountUtil.release(msg);
         }
     }
 
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) {
-        System.out.println("Flushed");
         ctx.flush();
+        ctx.close();
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-        System.out.println("Exception");
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable e) {
+        Main.logger.error("Netty status exception", e);
         // Close the connection when an exception is raised.
-        cause.printStackTrace();
         ctx.close();
     }
 
@@ -112,20 +97,28 @@ public class Status extends ChannelInboundHandlerAdapter {
                         }
                     });
 
-            // Start the client.
             final String HOST = "127.0.0.1";
-            ChannelFuture f4 = b.connect(HOST, 25564).sync();
-            ChannelFuture f5 = b.connect(HOST, 25565).sync();
-            ChannelFuture f6 = b.connect(HOST, 25566).sync();
-            ChannelFuture f7 = b.connect(HOST, 25567).sync();
-            ChannelFuture f8 = b.connect(HOST, 25568).sync();
+
+            // Start the client.
+//            ChannelFuture f4 = b.connect(HOST, 25564).sync();
+//            ChannelFuture f5 = b.connect(HOST, 25565).sync();
+//            ChannelFuture f6 = b.connect(HOST, 25566).sync();
+//            ChannelFuture f7 = b.connect(HOST, 25567).sync();
+//            ChannelFuture f8 = b.connect(HOST, 25568).sync();
 
             // Wait until the connection is closed.
-            f4.channel().closeFuture().sync();
-            f5.channel().closeFuture().sync();
-            f6.channel().closeFuture().sync();
-            f7.channel().closeFuture().sync();
-            f8.channel().closeFuture().sync();
+//            f4.channel().closeFuture().sync();
+//            f5.channel().closeFuture().sync();
+//            f6.channel().closeFuture().sync();
+//            f7.channel().closeFuture().sync();
+//            f8.channel().closeFuture().sync();
+
+            // A slightly different way of doing it (which is slower...)
+            b.connect(HOST, 25564).channel().closeFuture().sync();
+            b.connect(HOST, 25565).channel().closeFuture().sync();
+            b.connect(HOST, 25566).channel().closeFuture().sync();
+            b.connect(HOST, 25567).channel().closeFuture().sync();
+            b.connect(HOST, 25568).channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
             group.shutdownGracefully();
