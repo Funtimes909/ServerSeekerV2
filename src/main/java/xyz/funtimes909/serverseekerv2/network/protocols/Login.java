@@ -1,29 +1,15 @@
 package xyz.funtimes909.serverseekerv2.network.protocols;
 
-import com.google.common.primitives.Bytes;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import xyz.funtimes909.serverseekerv2.network.Connect;
-import xyz.funtimes909.serverseekerv2.network.PacketUtils;
-import xyz.funtimes909.serverseekerv2.types.protocols.login.LoginPacketType;
-import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Compression;
-import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Disconnect;
-import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.Encryption;
-import xyz.funtimes909.serverseekerv2.types.protocols.login.incoming.LoginSuccess;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.Socket;
 import java.security.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 

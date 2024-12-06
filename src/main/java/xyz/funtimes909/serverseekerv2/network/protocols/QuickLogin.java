@@ -1,16 +1,8 @@
 package xyz.funtimes909.serverseekerv2.network.protocols;
 
-import com.google.common.primitives.Bytes;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import xyz.funtimes909.serverseekerv2.network.Connect;
-import xyz.funtimes909.serverseekerv2.network.PacketUtils;
 import xyz.funtimes909.serverseekerv2.types.LoginAttempt;
 
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
-import java.util.List;
 
 public class QuickLogin {
 //    private static final List<Byte> loginPacketSuffix;

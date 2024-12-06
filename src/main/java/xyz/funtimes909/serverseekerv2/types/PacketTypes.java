@@ -34,8 +34,9 @@ public class PacketTypes {
             int size = VarInt.read(in);
             return in.readCharSequence(size, StandardCharsets.UTF_8).toString();
         }
-        public static void write(ByteBuf out, java.lang.String val) {
+        public static ByteBuf write(ByteBuf out, java.lang.String val) {
             ByteArray.write(out, val.getBytes(StandardCharsets.UTF_8));
+            return out;
         }
     }
 
