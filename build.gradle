@@ -15,8 +15,11 @@ dependencies {
     testImplementation platform("org.junit:junit-bom:5.10.0")
     testImplementation("org.junit.jupiter:junit-jupiter")
 
+    // Slf4j (logger)
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("ch.qos.logback:logback-classic:1.5.12") // For easier debugging (remove later)
+
     implementation("org.apache.commons:commons-dbcp2:2.12.0")
-    implementation("ch.qos.logback:logback-classic:1.5.12")
 
     // Postgres (SQL database)
     implementation("org.postgresql:postgresql:42.7.4")
