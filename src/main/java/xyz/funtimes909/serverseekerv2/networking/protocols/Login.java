@@ -1,4 +1,4 @@
-package xyz.funtimes909.serverseekerv2.network.protocols;
+package xyz.funtimes909.serverseekerv2.networking.protocols;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 

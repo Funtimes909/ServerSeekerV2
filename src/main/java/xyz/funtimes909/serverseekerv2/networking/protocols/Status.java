@@ -1,4 +1,4 @@
-package xyz.funtimes909.serverseekerv2.network.protocols;
+package xyz.funtimes909.serverseekerv2.networking.protocols;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -7,7 +7,7 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import xyz.funtimes909.serverseekerv2.network.packets.PacketDecoder;
+import xyz.funtimes909.serverseekerv2.networking.packets.PacketDecoder;
 import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 

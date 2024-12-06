@@ -11,9 +11,9 @@ import xyz.funtimes909.serverseekerv2.builders.Masscan;
 import xyz.funtimes909.serverseekerv2.builders.Mod;
 import xyz.funtimes909.serverseekerv2.builders.Player;
 import xyz.funtimes909.serverseekerv2.builders.Server;
-import xyz.funtimes909.serverseekerv2.network.Connect;
-import xyz.funtimes909.serverseekerv2.network.HttpUtils;
-import xyz.funtimes909.serverseekerv2.network.protocols.QuickLogin;
+import xyz.funtimes909.serverseekerv2.networking.Connect;
+import xyz.funtimes909.serverseekerv2.networking.HttpUtils;
+import xyz.funtimes909.serverseekerv2.networking.protocols.QuickLogin;
 import xyz.funtimes909.serverseekerv2.types.LoginAttempt;
 import xyz.funtimes909.serverseekerv2.types.ServerType;
 

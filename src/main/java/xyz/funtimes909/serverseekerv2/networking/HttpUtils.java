@@ -1,4 +1,4 @@
-package xyz.funtimes909.serverseekerv2.network;
+package xyz.funtimes909.serverseekerv2.networking;
 
 import java.net.URI;
 import java.net.http.HttpClient;

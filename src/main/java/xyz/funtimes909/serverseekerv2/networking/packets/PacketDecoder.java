@@ -1,4 +1,4 @@
-package xyz.funtimes909.serverseekerv2.network.packets;
+package xyz.funtimes909.serverseekerv2.networking.packets;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
