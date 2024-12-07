@@ -88,157 +88,155 @@ public class ScanManager {
     }
 
     public static void buildServer(Masscan masscan, JsonObject parsedJson, LoginAttempt loginAttempt) {
-        try {
-            // Define variables as wrappers to allow null values
-            String version = null;
-            ServerType type = ServerType.JAVA;
-            StringBuilder motd = new StringBuilder();
-            String asn = null;
-            String country = null;
-            String reverseDns = null;
-            String organization = null;
-            Integer protocol = null;
-            Integer fmlNetworkVersion = null;
-            Integer maxPlayers = null;
-            Integer onlinePlayers = null;
-            List<Player> playerList = new ArrayList<>();
-            List<Mod> modsList = new ArrayList<>();
+        // Define variables as wrappers to allow null values
+        String version = null;
+        ServerType type = ServerType.JAVA;
+        StringBuilder motd = new StringBuilder();
+        String asn = null;
+        String country = null;
+        String reverseDns = null;
+        String organization = null;
+        Integer protocol = null;
+        Integer fmlNetworkVersion = null;
+        Integer maxPlayers = null;
+        Integer onlinePlayers = null;
+        List<Player> playerList = new ArrayList<>();
+        List<Mod> modsList = new ArrayList<>();
 
-            // Server information
-            String address = masscan.ip();
-            short port = masscan.ports().getFirst().port();
-            long timestamp = System.currentTimeMillis() / 1000;
+        // Server information
+        String address = masscan.ip();
+        short port = masscan.ports().getFirst().port();
+        long timestamp = System.currentTimeMillis() / 1000;
 
-            // Country and ASN information
-            if (Main.ipLookups) {
-                String primaryResponse = HttpUtils.run(address);
-                if (primaryResponse != null) {
-                    JsonObject parsedPrimaryResponse = JsonParser.parseString(primaryResponse).getAsJsonObject();
-                    if (parsedPrimaryResponse.has("reverse")) reverseDns = parsedPrimaryResponse.get("reverse").getAsString();
-                    if (parsedPrimaryResponse.has("countryCode")) country = parsedPrimaryResponse.get("countryCode").getAsString();
-                    if (parsedPrimaryResponse.has("org")) organization = parsedPrimaryResponse.get("org").getAsString();
-                    if (parsedPrimaryResponse.has("as")) asn = parsedPrimaryResponse.get("as").getAsString();
-                } else if (!Main.token.isBlank()) {
-                    String secondaryResponse = HttpUtils.ipinfo(address);
-                    if (secondaryResponse != null) {
-                        JsonObject parsedSecondaryResponse = JsonParser.parseString(secondaryResponse).getAsJsonObject();
-                        if (parsedSecondaryResponse.has("hostname"))
-                            reverseDns = parsedSecondaryResponse.get("hostname").getAsString();
-                        if (parsedSecondaryResponse.has("country"))
-                            country = parsedSecondaryResponse.get("country").getAsString();
-                    }
-                }
-
-                // Don't insert empty fields to the database, insert null instead
-                if (reverseDns != null && reverseDns.isBlank()) {
-                    reverseDns = null;
-                }
-
-                if (organization != null && organization.isBlank()) {
-                    organization = null;
+        // Country and ASN information
+        if (Main.ipLookups) {
+            String primaryResponse = HttpUtils.run(address);
+            if (primaryResponse != null) {
+                JsonObject parsedPrimaryResponse = JsonParser.parseString(primaryResponse).getAsJsonObject();
+                if (parsedPrimaryResponse.has("reverse")) reverseDns = parsedPrimaryResponse.get("reverse").getAsString();
+                if (parsedPrimaryResponse.has("countryCode")) country = parsedPrimaryResponse.get("countryCode").getAsString();
+                if (parsedPrimaryResponse.has("org")) organization = parsedPrimaryResponse.get("org").getAsString();
+                if (parsedPrimaryResponse.has("as")) asn = parsedPrimaryResponse.get("as").getAsString();
+            } else if (!Main.token.isBlank()) {
+                String secondaryResponse = HttpUtils.ipinfo(address);
+                if (secondaryResponse != null) {
+                    JsonObject parsedSecondaryResponse = JsonParser.parseString(secondaryResponse).getAsJsonObject();
+                    if (parsedSecondaryResponse.has("hostname"))
+                        reverseDns = parsedSecondaryResponse.get("hostname").getAsString();
+                    if (parsedSecondaryResponse.has("country"))
+                        country = parsedSecondaryResponse.get("country").getAsString();
                 }
             }
 
-            // Neoforge
-            if (parsedJson.has("isModded")) {
-                type = ServerType.NEOFORGE;
+            // Don't insert empty fields to the database, insert null instead
+            if (reverseDns != null && reverseDns.isBlank()) {
+                reverseDns = null;
             }
 
-            // Minecraft server information
-            if (parsedJson.has("version")) {
-                version = parsedJson.get("version").getAsJsonObject().get("name").getAsString();
-                protocol = parsedJson.get("version").getAsJsonObject().get("protocol").getAsInt();
+            if (organization != null && organization.isBlank()) {
+                organization = null;
+            }
+        }
 
-                if (version.startsWith("Paper")) {
-                    type = ServerType.PAPER;
-                } else if (version.startsWith("Spigot")) {
-                    type = ServerType.SPIGOT;
-                } else if (version.contains("thermos")) {
-                    type = ServerType.THERMOS;
-                } else if (version.startsWith("CraftBukkit")) {
-                    type = ServerType.BUKKIT;
+        // Neoforge
+        if (parsedJson.has("isModded")) {
+            type = ServerType.NEOFORGE;
+        }
+
+        // Minecraft server information
+        if (parsedJson.has("version")) {
+            version = parsedJson.get("version").getAsJsonObject().get("name").getAsString();
+            protocol = parsedJson.get("version").getAsJsonObject().get("protocol").getAsInt();
+
+            if (version.startsWith("Paper")) {
+                type = ServerType.PAPER;
+            } else if (version.startsWith("Spigot")) {
+                type = ServerType.SPIGOT;
+            } else if (version.contains("thermos")) {
+                type = ServerType.THERMOS;
+            } else if (version.startsWith("CraftBukkit")) {
+                type = ServerType.BUKKIT;
+            }
+        }
+
+        // Description can be either an object or a string
+        if (parsedJson.has("description")) {
+            if (parsedJson.get("description").isJsonObject()) {
+                parseMOTD(parsedJson.get("description").getAsJsonObject(), 10, motd);
+            } else {
+                motd.append(parsedJson.get("description").getAsString());
+            }
+        }
+
+        // Forge servers send back information about mods
+        if (parsedJson.has("forgeData")) {
+            fmlNetworkVersion = parsedJson.get("forgeData").getAsJsonObject().get("fmlNetworkVersion").getAsInt();
+            type = ServerType.LEXFORGE;
+            if (parsedJson.get("forgeData").getAsJsonObject().has("mods")) {
+                for (JsonElement mod : parsedJson.get("forgeData").getAsJsonObject().get("mods").getAsJsonArray().asList()) {
+                    String modId = mod.getAsJsonObject().get("modId").getAsString();
+                    String modmarker = mod.getAsJsonObject().get("modmarker").getAsString();
+
+                    modsList.add(new Mod(modId, modmarker));
                 }
             }
+        }
 
-            // Description can be either an object or a string
-            if (parsedJson.has("description")) {
-                if (parsedJson.get("description").isJsonObject()) {
-                    parseMOTD(parsedJson.get("description").getAsJsonObject(), 10, motd);
-                } else {
-                    motd.append(parsedJson.get("description").getAsString());
-                }
-            }
+        // Check for players
+        if (parsedJson.has("players")) {
+            maxPlayers = parsedJson.get("players").getAsJsonObject().get("max").getAsInt();
+            onlinePlayers = parsedJson.get("players").getAsJsonObject().get("online").getAsInt();
+            if (parsedJson.get("players").getAsJsonObject().has("sample")) {
+                for (JsonElement playerJson : parsedJson.get("players").getAsJsonObject().get("sample").getAsJsonArray().asList()) {
+                    if (playerJson.getAsJsonObject().has("name") && playerJson.getAsJsonObject().has("id")) {
+                        String name = playerJson.getAsJsonObject().get("name").getAsString();
+                        String uuid = playerJson.getAsJsonObject().get("id").getAsString();
 
-            // Forge servers send back information about mods
-            if (parsedJson.has("forgeData")) {
-                fmlNetworkVersion = parsedJson.get("forgeData").getAsJsonObject().get("fmlNetworkVersion").getAsInt();
-                type = ServerType.LEXFORGE;
-                if (parsedJson.get("forgeData").getAsJsonObject().has("mods")) {
-                    for (JsonElement mod : parsedJson.get("forgeData").getAsJsonObject().get("mods").getAsJsonArray().asList()) {
-                        String modId = mod.getAsJsonObject().get("modId").getAsString();
-                        String modmarker = mod.getAsJsonObject().get("modmarker").getAsString();
+                        // Skip building player if uuid is null, has spaces in the name, or has no name
+                        if (name.contains(" ") || name.isBlank() && Main.ignoreBots) continue;
 
-                        modsList.add(new Mod(modId, modmarker));
-                    }
-                }
-            }
-
-            // Check for players
-            if (parsedJson.has("players")) {
-                maxPlayers = parsedJson.get("players").getAsJsonObject().get("max").getAsInt();
-                onlinePlayers = parsedJson.get("players").getAsJsonObject().get("online").getAsInt();
-                if (parsedJson.get("players").getAsJsonObject().has("sample")) {
-                    for (JsonElement playerJson : parsedJson.get("players").getAsJsonObject().get("sample").getAsJsonArray().asList()) {
-                        if (playerJson.getAsJsonObject().has("name") && playerJson.getAsJsonObject().has("id")) {
-                            String name = playerJson.getAsJsonObject().get("name").getAsString();
-                            String uuid = playerJson.getAsJsonObject().get("id").getAsString();
-
-                            // Skip building player if uuid is null, has spaces in the name, or has no name
-                            if (name.contains(" ") || name.isBlank() && Main.ignoreBots) continue;
-
-                            if (PlayerTracking.playerTracker.containsKey(name) && !loginAttempt.online) {
-                                HttpUtils.sendWebhook(
-                                        PlayerTracking.playerTracker.get(name),
-                                        name,
-                                        address
-                                );
-                                Main.logger.info("{} found in tracks.json, sending POST to webhook", name);
-                            }
-
-                            playerList.add(new Player(name, uuid, timestamp));
+                        if (PlayerTracking.playerTracker.containsKey(name) && !loginAttempt.online) {
+                            HttpUtils.sendWebhook(
+                                    PlayerTracking.playerTracker.get(name),
+                                    name,
+                                    address
+                            );
+                            Main.logger.info("{} found in tracks.json, sending POST to webhook", name);
                         }
+
+                        playerList.add(new Player(name, uuid, timestamp));
                     }
                 }
             }
+        }
 
-            // Build server
-            Server server = new Server.Builder()
-                    .setAddress(address)
-                    .setPort(port)
-                    .setServerType(type)
-                    .setTimestamp(timestamp)
-                    .setAsn(asn)
-                    .setCountry(country)
-                    .setReverseDns(reverseDns)
-                    .setOrganization(organization)
-                    .setVersion(version)
-                    .setProtocol(protocol)
-                    .setFmlNetworkVersion(fmlNetworkVersion)
-                    .setMotd(motd.toString())
-                    .setTimesSeen(1)
-                    .setIcon(parsedJson.has("favicon") ? parsedJson.get("favicon").getAsString() : null)
-                    .setPreventsReports(parsedJson.has("preventsChatReports") ? parsedJson.get("preventsChatReports").getAsBoolean() : null)
-                    .setEnforceSecure(parsedJson.has("enforcesSecureChat") ? parsedJson.get("enforcesSecureChat").getAsBoolean() : null)
-                    .setCracked(loginAttempt.online == null? null: !loginAttempt.online) // Login attempt checking if online, and the database expecting is cracked, so it needs to be inverted if not null
-                    .setWhitelist(loginAttempt.whitelist)
-                    .setMaxPlayers(maxPlayers)
-                    .setOnlinePlayers(onlinePlayers)
-                    .setPlayers(playerList)
-                    .setMods(modsList)
-                    .build();
+        // Build server
+        Server server = new Server.Builder()
+                .setAddress(address)
+                .setPort(port)
+                .setServerType(type)
+                .setTimestamp(timestamp)
+                .setAsn(asn)
+                .setCountry(country)
+                .setReverseDns(reverseDns)
+                .setOrganization(organization)
+                .setVersion(version)
+                .setProtocol(protocol)
+                .setFmlNetworkVersion(fmlNetworkVersion)
+                .setMotd(motd.toString())
+                .setTimesSeen(1)
+                .setIcon(parsedJson.has("favicon") ? parsedJson.get("favicon").getAsString() : null)
+                .setPreventsReports(parsedJson.has("preventsChatReports") ? parsedJson.get("preventsChatReports").getAsBoolean() : null)
+                .setEnforceSecure(parsedJson.has("enforcesSecureChat") ? parsedJson.get("enforcesSecureChat").getAsBoolean() : null)
+                .setCracked(loginAttempt.online == null? null: !loginAttempt.online) // Login attempt checking if online, and the database expecting is cracked, so it needs to be inverted if not null
+                .setWhitelist(loginAttempt.whitelist)
+                .setMaxPlayers(maxPlayers)
+                .setOnlinePlayers(onlinePlayers)
+                .setPlayers(playerList)
+                .setMods(modsList)
+                .build();
 
-            Database.updateServer(server);
-        } catch (Exception ignored) {}
+        Database.updateServer(server);
     }
 
     private static void parseMOTD(JsonElement element, int limit, StringBuilder motd) {
