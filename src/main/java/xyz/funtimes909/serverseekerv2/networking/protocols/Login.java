@@ -1,6 +1,9 @@
 package xyz.funtimes909.serverseekerv2.networking.protocols;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -17,12 +20,14 @@ public class Login {
     // The default username & uuid to attempt to login to servers if none is given
     public static final String username = "Herobrine";
     public static final UUID uuid = UUID.fromString("f84c6a79-0a4e-45e0-879b-cd49ebd4c4e2");
-//    public static final List<Byte> REQUEST = PacketFormatter.encodePacket(0, username, uuid);
-
-    // NOTE: This is only for testing. Once deployed, the BC provider will be added in the main function
+    public static final ByteBuf REQUEST;
     static {
-        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null)
-            Security.addProvider(new BouncyCastleProvider());
+        ByteBuf loginRequest = Unpooled.buffer();
+        loginRequest.writeByte(0); // Packet ID
+        PacketTypes.String.write(loginRequest, username); // Username
+        PacketTypes.UUID.write(loginRequest, uuid); // UUID
+
+        REQUEST = loginRequest.asReadOnly();
     }
 
 

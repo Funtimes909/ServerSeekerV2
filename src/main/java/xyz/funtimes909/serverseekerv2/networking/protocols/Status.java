@@ -8,40 +8,36 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import xyz.funtimes909.serverseekerv2.networking.packets.PacketDecoder;
+import xyz.funtimes909.serverseekerv2.networking.packets.PacketEncoder;
 import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 
 public class Status extends ChannelInboundHandlerAdapter {
-    public static final ByteBuf REQUEST;
+//    public static final ByteBuf REQUEST_HANDSHAKE;
+    public static final ByteBuf REQUEST_STATUS;
     static {
-        // Set up the request
-        ByteBuf req = Unpooled.buffer();
-        // Handshake Request
+        // Handshake Request //
         ByteBuf handshakeBuff = Unpooled.buffer();
+        PacketTypes.VarInt.write(handshakeBuff, 8);
         PacketTypes.VarInt.write(handshakeBuff, 0); // Packet Type
         PacketTypes.VarInt.write(handshakeBuff, 0); // Minecraft Protocol Version
         PacketTypes.String.write(handshakeBuff, ":3"); // Server Address
         handshakeBuff.writeShort(0); // Port
         handshakeBuff.writeByte(1); // Next State (1: status, 2: login, 3: transfer)
+//        REQUEST_HANDSHAKE = handshakeBuff.asReadOnly();
 
-        // Prefix with size
-        PacketTypes.VarInt.write(req, handshakeBuff.writerIndex());
-        req.writeBytes(handshakeBuff);
-
-        // TODO: Is this needed?
-        handshakeBuff.release();
-
-        // Status Request
-        req.writeByte(1); // Size
-        req.writeByte(0); // ID
-
-        REQUEST = req.asReadOnly();
+        // Status Request //
+//        ByteBuf statusBuff = Unpooled.buffer();
+        handshakeBuff.writeByte(1);
+        handshakeBuff.writeByte(0); // ID
+        REQUEST_STATUS = handshakeBuff.asReadOnly();
     }
 
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        ctx.writeAndFlush(REQUEST.copy());
+    public void channelActive(ChannelHandlerContext ctx) {
+//        ctx.write(REQUEST_HANDSHAKE.copy());
+        ctx.writeAndFlush(REQUEST_STATUS.copy());
 //        super.channelActive(ctx);
     }
 
@@ -51,6 +47,7 @@ public class Status extends ChannelInboundHandlerAdapter {
         ctx.close();
 
         ByteBuf in = (ByteBuf) msg;
+        int size = PacketTypes.VarInt.read(in);
         int protocol = PacketTypes.VarInt.read(in);
         String json = PacketTypes.String.read(in);
         System.out.println(json);
@@ -82,32 +79,35 @@ public class Status extends ChannelInboundHandlerAdapter {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
-                            p.addLast(new PacketDecoder(), new Status());
+//                            p.addLast(new Status());
+                            p.addLast(new PacketDecoder(), new PacketEncoder(), new QuickLogin(768));
                         }
                     });
 
             final String HOST = "127.0.0.1";
 
             // Start the client.
-            ChannelFuture f4 = b.connect(HOST, 25564).sync();
+//            ChannelFuture f4 = b.connect(HOST, 25564).sync();
             ChannelFuture f5 = b.connect(HOST, 25565).sync();
-            ChannelFuture f6 = b.connect(HOST, 25566).sync();
-            ChannelFuture f7 = b.connect(HOST, 25567).sync();
-            ChannelFuture f8 = b.connect(HOST, 25568).sync();
+//            ChannelFuture f6 = b.connect(HOST, 25566).sync();
+//            ChannelFuture f7 = b.connect(HOST, 25567).sync();
+//            ChannelFuture f8 = b.connect(HOST, 25568).sync();
 
             // Wait until the connection is closed.
-            f4.channel().closeFuture().sync();
+//            f4.channel().closeFuture().sync();
             f5.channel().closeFuture().sync();
-            f6.channel().closeFuture().sync();
-            f7.channel().closeFuture().sync();
-            f8.channel().closeFuture().sync();
+//            f6.channel().closeFuture().sync();
+//            f7.channel().closeFuture().sync();
+//            f8.channel().closeFuture().sync();
 
             // A slightly different way of doing it (which is slower...)
-//            b.connect(HOST, 25564).channel().closeFuture().sync();
-//            b.connect(HOST, 25565).channel().closeFuture().sync();
-//            b.connect(HOST, 25566).channel().closeFuture().sync();
-//            b.connect(HOST, 25567).channel().closeFuture().sync();
-//            b.connect(HOST, 25568).channel().closeFuture().sync();
+//            for (int i = 0; i < 100_000; i++) {
+//                b.connect(HOST, 25564).channel().closeFuture();
+//                b.connect(HOST, 25565).channel().closeFuture();
+//                b.connect(HOST, 25566).channel().closeFuture();
+//                b.connect(HOST, 25567).channel().closeFuture();
+//                b.connect(HOST, 25568).channel().closeFuture();
+//            }
         } finally {
             // Shut down the event loop to terminate all threads.
             group.shutdownGracefully();

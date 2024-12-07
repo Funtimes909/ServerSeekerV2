@@ -1,22 +1,82 @@
 package xyz.funtimes909.serverseekerv2.networking.protocols;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import xyz.funtimes909.serverseekerv2.types.LoginAttempt;
+import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 import java.net.Socket;
+import java.util.Arrays;
 
-public class QuickLogin {
-//    private static final List<Byte> loginPacketSuffix;
-//    static {
-//        loginPacketSuffix = PacketFormatter.encode(
-//                "", // Server Address
-//                (short) 0, // Port
-//                (byte) 2 // Next State (1: status, 2: login, 3: transfer)
-//        );
-//    }
-//    private static final List<Byte> idAndUsername = PacketFormatter.encode(
-//            (byte) 0, // Packet ID (all versions use 0)
-//            Login.username // Username
-//    );
+public class QuickLogin extends ChannelInboundHandlerAdapter {
+    private static final ByteBuf loginPacketSuffix;
+    private static final ByteBuf idAndUsername;
+    static {
+        ByteBuf loginPacketSuffixBuilder = Unpooled.buffer();
+        PacketTypes.String.write(loginPacketSuffixBuilder, ":3"); // Server Address
+        loginPacketSuffixBuilder.writeShort(0); // Port
+        loginPacketSuffixBuilder.writeByte(2);  // Next State (1: status, 2: login, 3: transfer)
+        loginPacketSuffix = loginPacketSuffixBuilder.asReadOnly();
+//        loginPacketSuffixBuilder.release(); // TODO: Do I need to release?
+
+        ByteBuf idAndUsernameBuilder = Unpooled.buffer();
+        idAndUsernameBuilder.writeByte(0); // Packet ID (all versions use 0)
+        PacketTypes.String.write(idAndUsernameBuilder, Login.username); // Username
+        idAndUsername = idAndUsernameBuilder.asReadOnly();
+//        idAndUsernameBuilder.release(); // TODO: Do I need to release?
+    }
+
+    private final ByteBuf REQUEST_HANDSHAKE;
+    private final ByteBuf REQUEST_LOGIN_START;
+
+    public QuickLogin(int protocol) {
+        // Handshake Packet //
+        ByteBuf handshake = Unpooled.buffer();
+        handshake.writeByte(0); // Protocol ID
+        PacketTypes.VarInt.write(handshake, protocol); // Minecraft Protocol
+        handshake.writeBytes(loginPacketSuffix); // Rest of the packet
+        this.REQUEST_HANDSHAKE = handshake.asReadOnly();
+
+        // Login Packet //
+        ByteBuf login = Unpooled.buffer();
+        if (protocol >= 764) { // 1.20.2 (to latest)
+            login.writeBytes(Login.REQUEST); // Modern login request
+        } else if (protocol >= 761) { // 1.19.3 (to 1.20.1)
+            PacketTypes.VarInt.write(login, idAndUsername.capacity() + 1); // Size
+            login.writeBytes(idAndUsername); // ID & Username
+            login.writeByte(0x00); // Weather the uuid is encoded (we get a smaller packet if we don't ;)
+        } else if (protocol >= 759) { // 1.19 (to 1.19.2)
+            PacketTypes.VarInt.write(login, idAndUsername.capacity() + 1 + (protocol == 760? 1: 0)); // Size
+            login.writeBytes(idAndUsername); // ID & Username
+            login.writeByte(0x00); // Weather we should encode lots of random stuff (don't bother)
+
+            if (protocol == 760) // 1.19.2
+                login.writeByte(0x00); // Weather we should encode the uuid (smaller if we don't)
+        } else {
+            PacketTypes.VarInt.write(login, idAndUsername.capacity()); // Size
+            login.writeBytes(idAndUsername); // ID & Username
+        }
+        this.REQUEST_LOGIN_START = login.asReadOnly();
+    }
+
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) {
+//        System.out.println(Arrays.toString(REQUEST.copy().array()));
+        ctx.write(REQUEST_HANDSHAKE.copy());
+        ctx.writeAndFlush(REQUEST_LOGIN_START.copy());
+//        super.channelActive(ctx);
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+        ByteBuf in = (ByteBuf) msg;
+        int protocol = PacketTypes.VarInt.read(in);
+        System.out.println(protocol);
+        if (protocol == 0 || protocol == 1 || protocol == 2)
+            ctx.close();
+    }
 
     /** A really rudimentary login method that can check some basic stats about the server */
     public static LoginAttempt quickLogin(Socket so, int protocol) {

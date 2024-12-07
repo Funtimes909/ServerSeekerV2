@@ -4,17 +4,26 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import xyz.funtimes909.serverseekerv2.types.PacketTypes;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.Security;
 import java.util.List;
 import java.util.zip.InflaterOutputStream;
 
 // TODO: Make it's output an abstract packet
 public class PacketDecoder extends ByteToMessageDecoder {
     public int compressionThreshold;
+
+    // NOTE: This is only for testing. Once deployed, the BC provider will be added in the main function
+    static {
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null)
+            Security.addProvider(new BouncyCastleProvider());
+    }
+
 
 
     public PacketDecoder() {
