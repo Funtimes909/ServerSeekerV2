@@ -9,6 +9,11 @@ ServerSeekerV2 is a better version of the original ServerSeeker. After being sol
 
 Currently, the only IP address used by me to scan for servers is ``45.135.194.65`` if you are seeing join requests in your server from the same username but a different IP address, it is not me.
 
+## For people just looking to not be scanned anymore
+You can add "§b§d§f§d§b" anywhere to your servers MOTD by changing the ``server.properties`` file. This change is inivisble to the client and wont change the look of your MOTD *in most cases.*
+If you add mods that change the way your server formats it's status responses (Such as MiniMOTD), it may not work. You can add this string anywhere in the MOTD but doing so anywhere but the end of the MOTD will change the color of all text after it to light blue.
+This will stop all join attempts from SSV2 on your server as long as that is in the MOTD, and you won't be added to the database. **if your server was previously scanned by SSV2 in the past your server will already be in the database**
+
 If you wish to request a server be removed from the public database and prevented from being scanned again, join my [Matrix Space](https://matrix.to/#/#projects:funtimes909.xyz) and message ``@me:funtimes909.xyz`` directly.
 
 Unlike the original ServerSeeker, V2 has some extra features:
