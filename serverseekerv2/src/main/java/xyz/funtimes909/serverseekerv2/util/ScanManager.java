@@ -13,6 +13,7 @@ import xyz.funtimes909.serverseekerv2.network.protocols.QuickLogin;
 import xyz.funtimes909.serverseekerv2_core.database.Database;
 import xyz.funtimes909.serverseekerv2_core.records.Server;
 import xyz.funtimes909.serverseekerv2_core.types.LoginAttempt;
+import xyz.funtimes909.serverseekerv2_core.util.MotdUtils;
 import xyz.funtimes909.serverseekerv2_core.util.ServerObjectBuilder;
 
 import java.net.Socket;
@@ -57,6 +58,20 @@ public class ScanManager {
                     try (Socket so = Connect.connect(address, port)) {
                         String json = Handshake.ping(so);
                         parsedJson = JsonParser.parseString(json).getAsJsonObject();
+
+                        // Build MOTD as soon as server responds to see if user has opted out of scanning
+                        if (parsedJson.has("description")) {
+                            StringBuilder motd = new StringBuilder();
+
+                            if (parsedJson.get("description").isJsonObject()) {
+                                MotdUtils.buildMOTD(parsedJson.get("description").getAsJsonObject(), 10, motd);
+                            } else {
+                                motd.append(parsedJson.get("description").getAsString());
+                            }
+
+                            // Opt-out code
+                            if (motd.toString().contains("§b§d§f§d§b")) return;
+                        }
                     }
 
                     // Servers close connection after handshake, we need to make a new socket
