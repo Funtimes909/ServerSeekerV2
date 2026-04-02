@@ -37,6 +37,7 @@ pub struct Masscan {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct PlayerTracking {
+	pub webhook: String,
 	pub enabled: bool,
 	pub players: Vec<String>,
 }
@@ -46,38 +47,6 @@ pub struct CountryTracking {
 	pub enabled: bool,
 	pub update_frequency: u64,
 	pub ipinfo_token: String,
-}
-
-impl Default for Config {
-	fn default() -> Self {
-		Config {
-			database: Database {
-				host: "localhost".to_string(),
-				port: 5432,
-				table: "postgres".to_string(),
-				user: "postgres".to_string(),
-				password: "password".to_string(),
-			},
-			scanner: ScannerConfig {
-				repeat: true,
-				scan_delay: 60,
-				port_range_start: 25565,
-				port_range_end: 25565,
-			},
-			masscan: Masscan {
-				config_file: "masscan.conf".to_string(),
-			},
-			player_tracking: PlayerTracking {
-				enabled: false,
-				players: vec![],
-			},
-			country_tracking: CountryTracking {
-				enabled: false,
-				update_frequency: 48,
-				ipinfo_token: "".to_string(),
-			},
-		}
-	}
 }
 
 impl ScannerConfig {

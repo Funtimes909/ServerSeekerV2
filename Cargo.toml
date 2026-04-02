@@ -1,8 +1,8 @@
 [package]
 name = "ServerSeekerV2"
 version = "0.1.0"
-edition = "2021"
-rust-version = "1.80.0"
+edition = "2024"
+rust-version = "1.94.0"
 repository = "https://git.funtimes909.xyz/ServerSeekerV2/ServerSeekerV2"
 authors = ["Funtimes909"]
 
@@ -14,13 +14,15 @@ toml = "0.8"
 tokio = { version = "1", features = ["full"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
 tracing-subscriber = "0.3"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "ipnet", "uuid", "json"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "ipnet", "uuid", "json", "chrono"] }
 indicatif = { version = "0.17" }
 futures-util = "0.3"
 anyhow = "1.0.98"
 clap = { version = "4.5.37", features = ["derive"] }
 reqwest = { version = "0.12.19", features = ["stream", "gzip"] }
 flate2 = "1.1.1"
+chrono = "0.4.44"
+blake3 = { version = "1.8.3", features = ["rayon"] }
 
 [profile.release]
 strip = true

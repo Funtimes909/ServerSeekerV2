@@ -4,8 +4,8 @@ use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use serde::Deserialize;
-use sqlx::types::ipnet::IpNet;
 use sqlx::PgPool;
+use sqlx::types::ipnet::IpNet;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::str::FromStr;
@@ -25,16 +25,15 @@ struct CountryRow {
 }
 
 pub async fn country_tracking(pool: PgPool, config: Config) -> anyhow::Result<()> {
-	loop {
-		download_database(&config).await?;
-		insert_json_to_table(&pool).await?;
+	insert_json_to_table(&pool).await?;
 
-		// Sleep
-		tokio::time::sleep(Duration::from_secs(
-			config.country_tracking.update_frequency * 60 * 60,
-		))
-		.await;
-	}
+	// Sleep
+	tokio::time::sleep(Duration::from_secs(
+		config.country_tracking.update_frequency * 60 * 60,
+	))
+	.await;
+
+	Ok(())
 }
 
 async fn download_database(config: &Config) -> anyhow::Result<()> {
@@ -105,10 +104,9 @@ async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>
 	serde_json::from_str(&format!(
 		"[{}]",
 		string
-			// Split at the end of every object
 			.split("}\n{")
-			// Skip all IPv6 netblocks
 			.map_while(|x| {
+				// Skip all IPv6 netblocks
 				match x.contains("::") {
 					true => None,
 					false => Some(x),
@@ -116,37 +114,9 @@ async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>
 			})
 			.map(|s| s.trim_matches(&['\n', '{', '}'][..]))
 			.map(|s| format!("{{{}}}", s))
-			// Collect everything
 			.collect::<Vec<_>>()
-			// Join everything with commas
 			.join(",")
 	))
-}
-
-pub async fn create_tables(pool: &PgPool) -> Result<(), sqlx::Error> {
-	// Create table
-	sqlx::query(
-		"CREATE TABLE IF NOT EXISTS countries (
-    		network CIDR,
-    		country VARCHAR(255),
-    		country_code VARCHAR(2),
-    		asn VARCHAR(16),
-    		company VARCHAR(255),
-    		PRIMARY KEY(network)
-    	)",
-	)
-	.execute(pool)
-	.await?;
-
-	// Use a GIST inet_ops index for the network column
-	// This allows for really fast lookup times from my testing
-	//
-	// Countries table needs to exist before we can create an index on it
-	sqlx::query("CREATE INDEX IF NOT EXISTS countries_table_index ON countries USING GIST (network inet_ops);")
-		.execute(pool)
-		.await?;
-
-	Ok(())
 }
 
 async fn insert_json_to_table(pool: &PgPool) -> anyhow::Result<()> {
@@ -170,14 +140,14 @@ async fn insert_json_to_table(pool: &PgPool) -> anyhow::Result<()> {
 
 	for netblock in json.into_iter().progress_with(bar) {
 		if let Ok(cidr) = IpNet::from_str(&netblock.network) {
-			let result = sqlx::query(
+			sqlx::query(
 				"INSERT INTO countries VALUES ($1, $2, $3, $4, $5) 
-					ON CONFLICT (network, country, country_code) DO UPDATE 
+					ON CONFLICT (network) DO UPDATE SET
 					network = EXCLUDED.network,
 					country = EXCLUDED.country,
 					country_code = EXCLUDED.country_code,
 					asn = EXCLUDED.asn,
-					company = EXCLUDED.company",
+					asn_name = EXCLUDED.asn_name",
 			)
 			.bind(cidr)
 			.bind(netblock.country)
@@ -185,15 +155,12 @@ async fn insert_json_to_table(pool: &PgPool) -> anyhow::Result<()> {
 			.bind(netblock.asn)
 			.bind(netblock.company)
 			.execute(&mut *transaction)
-			.await;
-
-			if let Err(e) = result {
-				debug!("Error while updating row in countries table {e}");
-			}
+			.await
+			.unwrap();
 		};
 	}
 
-	transaction.commit().await?;
+	transaction.commit().await.unwrap();
 
 	info!("All done!");
 	Ok(())

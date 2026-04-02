@@ -1,38 +1,5 @@
-use thiserror::Error;
-
-#[derive(Debug, Error)]
-pub enum RunError {
-	#[error("Failed to parse address")]
-	AddressParseError(#[from] std::net::AddrParseError),
-	#[error("I/O error")]
-	IOError(#[from] std::io::Error),
-	#[error("Malformed response")]
-	MalformedResponse,
-	#[error("Error while parsing response")]
-	ParseResponse(#[from] serde_json::Error),
-	#[error("Connection timed out")]
-	TimedOut(#[from] tokio::time::error::Elapsed),
-	#[error("Server opted out of scanning")]
-	ServerOptOut,
-	#[error("Error while updating server in database")]
-	DatabaseError(#[from] sqlx::Error),
-}
-
-impl From<RunError> for usize {
-	fn from(value: RunError) -> Self {
-		use RunError::*;
-
-		match value {
-			AddressParseError(_) => 0,
-			IOError(_) => 1,
-			MalformedResponse => 2,
-			ParseResponse(_) => 3,
-			TimedOut(_) => 4,
-			ServerOptOut => 5,
-			DatabaseError(_) => 6,
-		}
-	}
-}
+pub mod minecraft;
+pub mod response;
 
 pub enum MinecraftColorCodes {
 	Black,

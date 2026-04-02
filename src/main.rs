@@ -1,23 +1,25 @@
-#![feature(let_chains)]
 #![feature(string_from_utf8_lossy_owned)]
 
 mod config;
-mod country_tracking;
 mod database;
 mod protocol;
-mod response;
-mod scanner;
-mod utils;
+mod scanning;
 
-use crate::scanner::Scanner;
 use clap::Parser;
 use config::load_config;
-use scanner::Mode;
-use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::ConnectOptions;
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sqlx::types::ipnet::IpNet;
+use std::net::{Ipv4Addr, SocketAddrV4};
+use std::str::FromStr;
 use std::time::Duration;
+use tracing::error;
 use tracing::log::LevelFilter;
-use tracing::{error, info};
+
+use crate::database::{Database, ServerUpdateOperation, country_tracking};
+use crate::protocol::minecraft::simple_ping;
+use crate::protocol::response::MinecraftServer;
+use crate::scanning::rescanner::{Rescanner, ServerRescanPriority};
 
 #[derive(Parser, Debug)]
 #[clap(about = "Scans the internet for minecraft servers and indexes them")]
@@ -34,6 +36,13 @@ struct Args {
 	config_file: String,
 }
 
+#[derive(clap::ValueEnum, Clone, Debug, Default)]
+pub enum Mode {
+	#[default]
+	Scanning,
+	Rescanner,
+}
+
 #[tokio::main]
 async fn main() {
 	tracing_subscriber::fmt::init();
@@ -47,49 +56,63 @@ async fn main() {
 		}
 	};
 
-	info!("Using config file: {}", arguments.config_file);
-
+	// Credentials for database
 	let options = PgConnectOptions::new()
 		.username(&config.database.user)
 		.password(&config.database.password)
 		.host(&config.database.host)
 		.port(config.database.port)
 		.database(&config.database.table)
-		// Turn off slow statement logging, this clogs the console
 		.log_slow_statements(LevelFilter::Off, Duration::from_secs(60));
 
+	// Connect to the database with options
 	let pool = PgPoolOptions::new()
-		// Refresh connections every 24 hours
 		.max_lifetime(Duration::from_secs(86400))
+		.max_connections(100)
 		.acquire_slow_threshold(Duration::from_secs(60))
 		.connect_with(options)
 		.await
-		.ok();
+		.expect("Failed to connect to database!");
 
-	if let Some(pool) = &pool {
-		if config.country_tracking.enabled {
-			// Create tables
-			if country_tracking::create_tables(pool).await.is_err() {
-				error!("failed to create tables");
-				std::process::exit(1);
-			}
+	sqlx::migrate!("./migrations")
+		.run(&pool)
+		.await
+		.expect("Failed to run migrations on database!");
 
-			// Spawn task to update database
-			tokio::task::spawn(country_tracking::country_tracking(
-				pool.clone(),
-				config.clone(),
-			));
-		}
-	} else {
-		error!("Failed to connect to database");
-		std::process::exit(1);
+	let mut stream = tokio::net::TcpStream::connect(SocketAddrV4::new(Ipv4Addr::from_str("104.218.52.246").unwrap(), 25567))
+		.await
+		.unwrap();
+
+	if let Ok(ping_response) = simple_ping(&mut stream).await {
+
+		let server = serde_json::from_str::<MinecraftServer>(&ping_response).unwrap();
+
+			let update_operation = ServerUpdateOperation {
+				server,
+				address: IpNet::from_str("104.218.52.246/32").unwrap(),
+				port: 25565,
+				timestamp: chrono::Utc::now().naive_utc(),
+				database: Database { connection: pool },
+			};
+
+			update_operation.update_or_insert_favicon().await.unwrap();
+			update_operation.update_or_insert_server().await.unwrap();
+			update_operation.update_or_insert_players().await.unwrap();
+			update_operation.update_or_insert_mods().await.unwrap();
+
+			println!("asda");
 	}
 
-	Scanner::new()
-		.config(config)
-		.mode(arguments.mode)
-		.pool(pool)
-		.build()
-		.start()
-		.await;
+	// match arguments.mode {
+	// 	Mode::Scanning => todo!(),
+	// 	Mode::Rescanner => {
+	// 		let rescanner = Rescanner {
+	// 			is_active: true,
+	// 			database: Database { connection: pool },
+	// 			rescan_priority: ServerRescanPriority::OldestFirst,
+	// 		};
+
+	// 		rescanner.rescan_database().await;
+	// 	}
+	// }
 }

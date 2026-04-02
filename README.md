@@ -26,7 +26,7 @@ Blazingly fast Minecraft server scanner written in Rust 🦀 🚀
 
 ![ServerSeekerV2 Scanning Servers](https://files.nucceteere.xyz/assets/SSV2.png)
 
-ServerSeekerV2 is a complete rewrite of the original ServerSeeker but faster and better with more features.
+ServerSeekerV2 is a complete rewrite of the original ServerSeeker but faster and better, with more features.
 ServerSeekerV2 is written in Rust allowing it to be blazingly fast and memory safe. 🦀 🚀
 
 [Discord Server](https://discord.gg/UA5kyprunc)
@@ -35,7 +35,7 @@ ServerSeekerV2 is written in Rust allowing it to be blazingly fast and memory sa
 
 (The two are bridged together so you only need to join one)
 
-### Please don't join these asking for support, I intentionally don't provide support setting up these projects
+### SSV2 is provided as is, no support is given for setting it up or using it.
 
 ## Features
 
@@ -66,13 +66,12 @@ my [Matrix Space](https://matrix.to/#/#projects:funtimes909.xyz) and message ``@
 
 ## FAQ
 
+- Q: How can I get my server removed?
+- A: Add "§b§d§f§d§b" to the end of your servers MOTD, your server will be removed next time it is found.
+
 - Q: What is this?
 - A: ServerSeekerV2 is a faster version of the original ServerSeeker, it pings around 4 billion IPv4 addresses every few
   hours and attempts to join Minecraft servers on the ones that respond. This process is repeated over and over again.
-
-- Q: How can I get my server removed?
-- A: See above method or join my [Matrix Space](https://matrix.to/#/#projects:funtimes909.xyz) and ping
-  ``@me:funtimes909.xyz``.
 
 - Q: I have a dynamic IP address, how can I get my server removed?
 - A: I can't remove your IP address every time it changes, you will have to rely on using the MOTD method described
@@ -108,9 +107,6 @@ my [Matrix Space](https://matrix.to/#/#projects:funtimes909.xyz) and message ``@
 - [serde](https://crates.io/crates/serde)
 
 ## Contributing
-
-**ServerSeekerV2 uses nightly rust**
-Please run `rustup override set nightly` in the project directory after you clone it to run it
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any
 contributions you make are **greatly appreciated**.

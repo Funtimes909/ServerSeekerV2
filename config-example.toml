@@ -1,33 +1,25 @@
 [scanner]
-# Repeat after a scan is complete?
 repeat = true
-# How long to wait before starting another scan in seconds
 scan_delay = 60
-# Start of port range
 port_range_start = 25565
-# End of port range
 port_range_end = 25565
+ignore_fake_players = true
 
 [masscan]
 # Location of masscans config file
 config_file = "masscan.conf"
 
 [database]
-# Database URL
-host = "database.yourdomain.xyz"
-# Database port
+host = "postgres.example.com"
 port = 5432
-# Database table
 table = "postgres"
-# Database user
 user = "postgres"
-# Database user password
 password = "SuperSuperSecretPassword"
 
 [player_tracking]
-# Enable player tracking?
 enabled = false
-# List of players to track
+webhook = "https://discord.com/api/webhooks/blahblahblah"
+# Comma separated list of usernames to search for
 players = [""]
 
 [country_tracking]
@@ -35,5 +27,4 @@ players = [""]
 enabled = false
 # How often to update the country information table in hours (minimum 24 hours)
 update_frequency = 48
-# IPInfo token
 ipinfo_token = ":3"
