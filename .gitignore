@@ -1,5 +1,4 @@
 /target
-/migrations
 .idea
 config.toml
 .env
