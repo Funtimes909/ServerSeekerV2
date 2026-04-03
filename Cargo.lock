@@ -13,6 +13,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "indicatif",
+ "lazy_static",
  "reqwest",
  "serde",
  "serde_json",
