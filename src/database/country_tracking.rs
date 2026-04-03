@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::{Read, Write};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{debug, info};
+use tracing::info;
 
 const DOWNLOAD_URL: &str = "https://ipinfo.io/data/ipinfo_lite.json.gz?token=";
 

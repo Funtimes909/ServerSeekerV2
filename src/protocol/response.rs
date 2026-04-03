@@ -55,10 +55,6 @@ pub struct MinecraftPlayers {
 
 #[derive(Deserialize, Serialize, PartialEq, Clone, Debug)]
 pub struct MinecraftPlayer {
-	// Some servers could send a player sample with empty name or id fields.
-	// This is useful for fingerprinting but currently ignored
-	// To add it in the future all we would need to do is change these fields to be an Option<String>
-	// and check if either is None
 	pub id: String,
 	pub name: String,
 }
@@ -66,8 +62,8 @@ pub struct MinecraftPlayer {
 #[derive(Deserialize, Serialize, PartialEq, Clone, Debug)]
 pub struct ForgeData {
 	#[serde(rename = "fmlNetworkVersion")]
-	pub fml_network_version: i32,
-	pub truncated: bool,
+	pub fml_network_version: Option<i32>,
+	pub truncated: Option<bool>,
 
 	#[serde(rename = "d")]
 	pub forge_encoded_data: Option<String>,
@@ -93,11 +89,6 @@ pub struct BetterCompatibilityChecker {
 }
 
 impl MinecraftServer {
-	/// Hash the favicons data
-	pub fn get_favicon_hash(favicon: &str) -> [u8; 32] {
-		*blake3::hash(favicon.as_bytes()).as_bytes()
-	}
-
 	// Checks if this server is running in offline mode by checking if any of the players uuid version is anything other than 4
 	pub fn is_server_online_mode(&self) -> bool {
 		if let Some(sample) = &self.players.sample {
@@ -126,12 +117,8 @@ impl MinecraftServer {
 		}
 
 		// Check for duplicate uuids
-		self.players
-			.sample
-			.clone()
-			.unwrap()
-			.into_iter()
-			.for_each(|a| {
+		self.players.sample.as_ref().map(|a| {
+			a.iter().for_each(|a| {
 				let uuid = Uuid::parse_str(&a.id).unwrap();
 
 				if seen_uuids.contains(&uuid) {
@@ -139,7 +126,8 @@ impl MinecraftServer {
 				}
 
 				seen_uuids.insert(uuid);
-			});
+			})
+		});
 
 		is_fake_sample
 	}

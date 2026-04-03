@@ -9,16 +9,11 @@ use clap::Parser;
 use config::load_config;
 use sqlx::ConnectOptions;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
-use sqlx::types::ipnet::IpNet;
-use std::net::{Ipv4Addr, SocketAddrV4};
-use std::str::FromStr;
 use std::time::Duration;
 use tracing::error;
 use tracing::log::LevelFilter;
 
-use crate::database::{Database, ServerUpdateOperation, country_tracking};
-use crate::protocol::minecraft::simple_ping;
-use crate::protocol::response::MinecraftServer;
+use crate::database::Database;
 use crate::scanning::rescanner::{Rescanner, ServerRescanPriority};
 
 #[derive(Parser, Debug)]
@@ -79,40 +74,16 @@ async fn main() {
 		.await
 		.expect("Failed to run migrations on database!");
 
-	let mut stream = tokio::net::TcpStream::connect(SocketAddrV4::new(Ipv4Addr::from_str("104.218.52.246").unwrap(), 25567))
-		.await
-		.unwrap();
-
-	if let Ok(ping_response) = simple_ping(&mut stream).await {
-
-		let server = serde_json::from_str::<MinecraftServer>(&ping_response).unwrap();
-
-			let update_operation = ServerUpdateOperation {
-				server,
-				address: IpNet::from_str("104.218.52.246/32").unwrap(),
-				port: 25565,
-				timestamp: chrono::Utc::now().naive_utc(),
+	match arguments.mode {
+		Mode::Scanning => todo!(),
+		Mode::Rescanner => {
+			let rescanner = Rescanner {
+				is_active: true,
 				database: Database { connection: pool },
+				rescan_priority: ServerRescanPriority::OldestFirst,
 			};
 
-			update_operation.update_or_insert_favicon().await.unwrap();
-			update_operation.update_or_insert_server().await.unwrap();
-			update_operation.update_or_insert_players().await.unwrap();
-			update_operation.update_or_insert_mods().await.unwrap();
-
-			println!("asda");
+			rescanner.rescan_database().await;
+		}
 	}
-
-	// match arguments.mode {
-	// 	Mode::Scanning => todo!(),
-	// 	Mode::Rescanner => {
-	// 		let rescanner = Rescanner {
-	// 			is_active: true,
-	// 			database: Database { connection: pool },
-	// 			rescan_priority: ServerRescanPriority::OldestFirst,
-	// 		};
-
-	// 		rescanner.rescan_database().await;
-	// 	}
-	// }
 }

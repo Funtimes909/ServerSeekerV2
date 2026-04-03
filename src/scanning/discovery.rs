@@ -1,3 +1,4 @@
+use chrono::Timelike;
 use sqlx::types::ipnet::{IpNet, Ipv4Net};
 use std::{
 	net::{Ipv4Addr, SocketAddrV4},
@@ -66,15 +67,21 @@ impl DiscoveryScanner {
 
 				if let Ok(response) = simple_ping(&mut stream).await {
 					if let Ok(server) = serde_json::from_str::<MinecraftServer>(&response) {
+						let address = IpNet::from(Ipv4Net::from(address));
+
+						if server.has_opted_out() {
+							println!("Deleting server!");
+							database_clone.delete_server(address).await.unwrap();
+						}
+
 						let update_operation = ServerUpdateOperation {
 							server,
-							address: IpNet::from(Ipv4Net::from(address)),
+							address,
 							port: port as i32,
-							timestamp: chrono::Utc::now().naive_utc(),
+							timestamp: chrono::Utc::now().naive_utc().with_nanosecond(0).unwrap(),
 							database: database_clone,
 						};
 
-						update_operation.update_or_insert_favicon().await.unwrap();
 						update_operation.update_or_insert_server().await.unwrap();
 						update_operation.update_or_insert_players().await.unwrap();
 						update_operation.update_or_insert_mods().await.unwrap();

@@ -1,5 +1,6 @@
 use std::net::SocketAddrV4;
 
+use chrono::Timelike;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use sqlx::{Row, types::ipnet::IpNet};
@@ -46,7 +47,7 @@ impl Rescanner {
         // Need to be able to pause this process at anytime when the countries table gets updated
 		while let Some(Ok(row)) = servers_stream.next().await && self.is_active {
             let address = row.get::<IpNet, _>("address");
-            
+
             let connect_address = match address {
                 IpNet::V4(i) => i.addr(),
                 _ => continue,
@@ -58,15 +59,19 @@ impl Rescanner {
 
             if let Ok(ping_response) = simple_ping(&mut stream).await {
                 if let Ok(server) = serde_json::from_str::<MinecraftServer>(&ping_response) {
+
+					if server.has_opted_out() {
+						database_clone.delete_server(address).await.unwrap();
+					}
+
                     let update_operation = ServerUpdateOperation {
                         server,
                         address,
                         port: 25565,
-                        timestamp: chrono::Utc::now().naive_utc(),
+                        timestamp: chrono::Utc::now().naive_utc().with_nanosecond(0).unwrap(),
                         database: database_clone,
                     };
-					
-					update_operation.update_or_insert_favicon().await.unwrap();
+
 					update_operation.update_or_insert_server().await.unwrap();
 					update_operation.update_or_insert_players().await.unwrap();
 					update_operation.update_or_insert_mods().await.unwrap();

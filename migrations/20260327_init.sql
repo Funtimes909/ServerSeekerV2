@@ -18,14 +18,14 @@ create table if not exists servers (
     port integer,
     first_seen timestamp without time zone not null default now (),
     last_seen timestamp without time zone not null,
-    last_time_player_online timestamp without time zone not null,
-    last_time_no_players_online timestamp without time zone not null,
+    last_time_player_online timestamp without time zone,
+    last_time_no_players_online timestamp without time zone,
     version_protocol integer not null,
     version_name text not null,
     enforces_secure_chat boolean not null,
     previews_chat boolean not null,
     is_online_mode boolean not null,
-    is_whitelisted boolean not null,
+    is_whitelisted boolean,
     favicon_hash bytea references favicons (hash),
     max_players integer,
     online_players integer,
@@ -33,7 +33,7 @@ create table if not exists servers (
     description_raw jsonb,
 
     -- neoforge
-    is_modded boolean,
+    neoforge_is_modded boolean,
 
     -- forge
     fml_network_version integer,
@@ -53,8 +53,8 @@ create table if not exists players (
         address inet,
         port integer,
         uuid uuid,
-        username text not null,
         is_online_mode boolean not null,
+        username text not null,
         first_seen timestamp without time zone not null default now (),
         last_seen timestamp without time zone not null,
         primary key (address, port, uuid),
@@ -65,11 +65,9 @@ create table if not exists mods (
         address inet,
         port integer,
         id text,
-        mod_marker text,
+        version text,
         primary key (address, port, id),
         foreign key (address, port) references servers (address, port) on delete cascade
 );
-
--- Indexes
 
 create index if not exists countries_index on countries using gist (network inet_ops);
