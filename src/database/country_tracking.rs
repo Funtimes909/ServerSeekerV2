@@ -2,13 +2,14 @@ use crate::CONFIG;
 use anyhow::bail;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 use sqlx::types::ipnet::IpNet;
 use sqlx::{PgPool, QueryBuilder};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::str::FromStr;
+use std::time::Duration;
 use tracing::{error, info};
 
 const DOWNLOAD_URL: &str = "https://ipinfo.io/data/ipinfo_lite.json.gz?token=";
@@ -22,6 +23,25 @@ struct CountryRow {
 	asn: Option<String>,
 	#[serde(rename = "as_name")]
 	asn_name: Option<String>,
+}
+
+pub async fn run(pool: &PgPool) {
+	loop {
+		tokio::time::sleep(Duration::from_hours(
+			CONFIG.country_tracking.update_frequency,
+		))
+		.await;
+
+		info!("Updating out of date countries table");
+
+		if let Err(e) = download_ipinfo_json().await {
+			error!("Error while downloading countries database from ipinfo: {e}");
+		};
+
+		if let Err(e) = insert_records_to_database(&pool).await {
+			error!("Error while inserting rows to countries table: {e}");
+		}
+	}
 }
 
 pub async fn download_ipinfo_json() -> anyhow::Result<()> {
@@ -87,7 +107,7 @@ pub async fn download_ipinfo_json() -> anyhow::Result<()> {
 }
 
 // JSON from ipinfo is not valid JSON, we need to parse it into valid JSON manually
-pub async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>> {
+async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>> {
 	serde_json::from_str(&format!(
 		"[{}]",
 		string

@@ -121,6 +121,8 @@ async fn main() {
 				error!("Error while inserting rows to countries table: {e}");
 			}
 		}
+
+		country_tracking::run(&pool).await;
 	}
 
 	match arguments.mode {
