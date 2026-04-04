@@ -41,7 +41,7 @@ pub enum Mode {
 }
 
 lazy_static! {
-	static ref CONFIG: Config = {
+	pub static ref CONFIG: Config = {
 		match load_config(&Args::parse().config_file) {
 			Ok(config) => config,
 			Err(e) => {

@@ -1,43 +1,31 @@
-use crate::config::Config;
+use crate::CONFIG;
 use anyhow::bail;
 use flate2::read::GzDecoder;
 use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use serde::Deserialize;
-use sqlx::PgPool;
 use sqlx::types::ipnet::IpNet;
+use sqlx::{PgPool, QueryBuilder};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::str::FromStr;
-use std::time::Duration;
-use tracing::info;
+use tracing::{error, info};
 
 const DOWNLOAD_URL: &str = "https://ipinfo.io/data/ipinfo_lite.json.gz?token=";
+const POSTGRES_BIND_LIMIT: usize = 65535;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 struct CountryRow {
 	network: String,
 	country: String,
 	country_code: String,
 	asn: Option<String>,
 	#[serde(rename = "as_name")]
-	company: Option<String>,
+	asn_name: Option<String>,
 }
 
-pub async fn country_tracking(pool: PgPool, config: Config) -> anyhow::Result<()> {
-	insert_json_to_table(&pool).await?;
-
-	// Sleep
-	tokio::time::sleep(Duration::from_secs(
-		config.country_tracking.update_frequency * 60 * 60,
-	))
-	.await;
-
-	Ok(())
-}
-
-async fn download_database(config: &Config) -> anyhow::Result<()> {
-	let url = format!("{}{}", DOWNLOAD_URL, config.country_tracking.ipinfo_token);
+pub async fn download_ipinfo_json() -> anyhow::Result<()> {
+	let url = format!("{}{}", DOWNLOAD_URL, CONFIG.country_tracking.ipinfo_token);
 	let response = reqwest::get(url).await?;
 
 	// If response is OK write to file and unzip
@@ -73,7 +61,6 @@ async fn download_database(config: &Config) -> anyhow::Result<()> {
 
 		// Done
 		bar.finish_with_message("Finished!");
-		info!("Decompressing output file...");
 
 		// Decompress file
 		let mut decoder = GzDecoder::new(File::open("ipinfo.json.gz")?);
@@ -100,7 +87,7 @@ async fn download_database(config: &Config) -> anyhow::Result<()> {
 }
 
 // JSON from ipinfo is not valid JSON, we need to parse it into valid JSON manually
-async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>> {
+pub async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>> {
 	serde_json::from_str(&format!(
 		"[{}]",
 		string
@@ -119,49 +106,79 @@ async fn parse_json_to_vec(string: String) -> serde_json::Result<Vec<CountryRow>
 	))
 }
 
-async fn insert_json_to_table(pool: &PgPool) -> anyhow::Result<()> {
+pub async fn insert_records_to_database(pool: &PgPool) -> anyhow::Result<()> {
 	let mut file = File::open("ipinfo.json")?;
 	let mut string = String::new();
 	file.read_to_string(&mut string)?;
 
-	let json = parse_json_to_vec(string).await?;
-	info!("JSON Parsed successfully.");
-
-	let mut transaction = pool.begin().await?;
+	let country_rows = parse_json_to_vec(string).await?;
 
 	let style = ProgressStyle::with_template(
-		"[{elapsed_precise}] [{bar:40.white/blue}] {human_pos}/{human_len} {msg}",
+		"[{elapsed_precise}] [{bar:40.white/blue}] {human_pos}/{human_len}",
 	)
 	.expect("failed to create progress bar style")
 	.progress_chars("=>-");
 
-	let bar = ProgressBar::new(json.len() as u64).with_style(style);
-	bar.set_message("Inserting rows to countries table...");
+	let bar = ProgressBar::new(country_rows.len() as u64).with_style(style);
 
-	for netblock in json.into_iter().progress_with(bar) {
-		if let Ok(cidr) = IpNet::from_str(&netblock.network) {
-			sqlx::query(
-				"INSERT INTO countries VALUES ($1, $2, $3, $4, $5) 
-					ON CONFLICT (network) DO UPDATE SET
-					network = EXCLUDED.network,
-					country = EXCLUDED.country,
-					country_code = EXCLUDED.country_code,
-					asn = EXCLUDED.asn,
-					asn_name = EXCLUDED.asn_name",
-			)
-			.bind(cidr)
-			.bind(netblock.country)
-			.bind(netblock.country_code)
-			.bind(netblock.asn)
-			.bind(netblock.company)
-			.execute(&mut *transaction)
-			.await
-			.unwrap();
-		};
+	let rows_per_chunk = POSTGRES_BIND_LIMIT / 5;
+	let mut buffer = Vec::with_capacity(rows_per_chunk);
+	let mut iter = country_rows.into_iter();
+	let mut rows_affected = 0;
+
+	loop {
+		buffer.clear();
+
+		for _ in 0..rows_per_chunk {
+			match iter.next() {
+				Some(item) => buffer.push(item),
+				None => break,
+			}
+		}
+
+		if buffer.is_empty() {
+			break;
+		}
+
+		let mut builder = QueryBuilder::new("INSERT INTO countries ");
+
+		builder.push_values(buffer.iter().take(rows_per_chunk), |mut query, record| {
+			// Some addresses lack a suffix, parsing to an ipnet will fail if it's missing
+			let network = match record.network.contains('/') {
+				true => IpNet::from_str(&record.network),
+				false => IpNet::from_str(&format!("{}{}", &record.network, "/32")),
+			};
+
+			if let Ok(inet) = network {
+				query
+					.push_bind(inet)
+					.push_bind(&record.country)
+					.push_bind(&record.country_code)
+					.push_bind(&record.asn)
+					.push_bind(&record.asn_name);
+			}
+
+			bar.inc(1);
+		});
+
+		builder.push(
+			" ON CONFLICT (network) DO UPDATE SET 
+			network = EXCLUDED.network,
+			country = EXCLUDED.country,
+			country_code = EXCLUDED.country_code,
+			asn = EXCLUDED.asn,
+			asn_name = EXCLUDED.asn_name",
+		);
+
+		let query_result = builder.build().execute(pool).await;
+
+		match query_result {
+			Ok(result) => rows_affected += result.rows_affected(),
+			Err(e) => error!("Failed to update countries table: {e}"),
+		}
 	}
 
-	transaction.commit().await.unwrap();
+	info!("Updated {rows_affected} rows");
 
-	info!("All done!");
 	Ok(())
 }
