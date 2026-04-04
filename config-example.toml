@@ -25,6 +25,6 @@ players = [""]
 [country_tracking]
 # Enable tracking of country information (requires a valid https://ipinfo.io account token)
 enabled = false
-# How often to update the country information table in hours (minimum 24 hours)
+# How often to update the country information table in hours (minimum 12 hours)
 update_frequency = 48
 ipinfo_token = ":3"

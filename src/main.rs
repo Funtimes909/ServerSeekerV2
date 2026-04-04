@@ -5,17 +5,18 @@ mod database;
 mod protocol;
 mod scanning;
 
+use chrono::{DateTime, Local, NaiveDate};
 use clap::Parser;
 use config::load_config;
 use lazy_static::lazy_static;
-use sqlx::ConnectOptions;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+use sqlx::{ConnectOptions, Row};
 use std::time::Duration;
-use tracing::error;
 use tracing::log::LevelFilter;
+use tracing::{error, info};
 
 use crate::config::Config;
-use crate::database::Database;
+use crate::database::{Database, country_tracking};
 use crate::scanning::rescanner::{Rescanner, ServerRescanPriority};
 
 #[derive(Parser, Debug)]
@@ -81,6 +82,46 @@ async fn main() {
 		.run(&pool)
 		.await
 		.expect("Failed to run migrations on database!");
+
+	// Setup country tracking if enabled
+	if CONFIG.country_tracking.enabled {
+		let track_commit_timestamp_enabled = sqlx::query("show track_commit_timestamp")
+			.fetch_one(&pool)
+			.await
+			.expect("Couldn't fetch track_commit_timestamp status from postgres")
+			.get::<&str, _>("track_commit_timestamp")
+			.eq("on");
+
+		// Ensure timestamp logging is enabled on the database
+		if !track_commit_timestamp_enabled {
+			error!("Please enable \"track_commit_timestamps\" in the database configuration");
+			std::process::exit(1);
+		}
+
+		// Get the timestamp that the countries table was last modified
+		let countries_last_updated_timestamp =
+			sqlx::query("SELECT pg_xact_commit_timestamp(xmin) FROM countries")
+				.fetch_one(&pool)
+				.await
+				.expect("Couldn't fetch timestamp of last transaction on countries table")
+				.get::<DateTime<Local>, _>("pg_xact_commit_timestamp");
+
+		// Only update countries table if it was last modified more than the update frequency ago
+		if countries_last_updated_timestamp
+			<= Local::now()
+				- chrono::Duration::hours(CONFIG.country_tracking.update_frequency as i64)
+		{
+			info!("Updating out of date countries table");
+
+			if let Err(e) = country_tracking::download_ipinfo_json().await {
+				error!("Error while downloading countries database from ipinfo: {e}");
+			};
+
+			if let Err(e) = country_tracking::insert_records_to_database(&pool).await {
+				error!("Error while inserting rows to countries table: {e}");
+			}
+		}
+	}
 
 	match arguments.mode {
 		Mode::Scanning => todo!(),
