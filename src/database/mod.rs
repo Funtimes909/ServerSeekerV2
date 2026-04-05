@@ -241,7 +241,7 @@ impl ServerUpdateOperation {
 	}
 
 	/// Insert a servers icon into the favicons table
-	pub async fn update_or_insert_favicon(&self, hash: [u8; 32]) -> anyhow::Result<()> {
+	async fn update_or_insert_favicon(&self, hash: [u8; 32]) -> anyhow::Result<()> {
 		sqlx::query("INSERT INTO favicons VALUES ($1, $2, $3) ON CONFLICT (hash) DO UPDATE set last_seen = EXCLUDED.last_seen")
 			.bind(hash.as_slice())
 			.bind(&self.server.favicon)

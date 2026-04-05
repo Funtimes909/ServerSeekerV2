@@ -1,21 +1,15 @@
-use chrono::Timelike;
+use chrono::Utc;
 use sqlx::types::ipnet::{IpNet, Ipv4Net};
-use std::{
-	net::{Ipv4Addr, SocketAddrV4},
-	str::FromStr,
-};
+use std::{net::Ipv4Addr, str::FromStr};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+use tracing::debug;
 
-use crate::{
-	config::Config,
-	database::{Database, ServerUpdateOperation},
-	protocol::{minecraft::simple_ping, response::MinecraftServer},
-};
+use crate::CONFIG;
+use crate::database::ServerUpdateOperation;
+use crate::database::Database;
 
 pub struct DiscoveryScanner {
-	pub is_active: bool,
-	config: Config,
 	database: Database,
 }
 
@@ -23,7 +17,7 @@ impl DiscoveryScanner {
 	async fn scan(&self) {
 		// Spawn masscan
 		let mut command = Command::new("sudo")
-			.args(["masscan", "-c", &self.config.masscan.config_file])
+			.args(["masscan", "-c", &CONFIG.masscan.config_file])
 			.stdout(std::process::Stdio::piped())
 			.spawn()
 			.expect("error while executing masscan");
@@ -40,54 +34,51 @@ impl DiscoveryScanner {
 		while let Ok(Some(line)) = reader.next_line().await {
 			let mut line = line.split_whitespace();
 
-			// .nth() consumes all preceding elements so address will be the 2nd
+			// Address
 			let address = match line.nth(1).and_then(|a| Ipv4Addr::from_str(a).ok()) {
 				Some(address) => address,
 				_ => continue,
 			};
 
-			// Get port
+			// Port
 			let port = match line
 				.nth(3)
 				// Split on port/tcp
 				.and_then(|p| p.split('/').nth(0))
 				// Parse as u16
-				.and_then(|s| s.parse::<u16>().ok())
+				.and_then(|s| s.parse().ok())
 			{
 				Some(port) => port,
 				None => continue,
 			};
 
-			let database_clone = self.database.clone();
+			// Immediately ping any returned servers
+			let completed_server = super::run(address, port).await;
 
-			// Spawn a pinging task for each server found
-			tokio::spawn(async move {
-				let socket = SocketAddrV4::new(address, port);
-				let mut stream = tokio::net::TcpStream::connect(socket).await.unwrap();
+			if let Ok(Ok(server)) = completed_server {
+				let insertion_operation = ServerUpdateOperation {
+					server,
+					address: IpNet::from(Ipv4Net::from(address)),
+					port: port as i32,
+					timestamp: Utc::now().naive_local(),
+					database: self.database.clone(),
+				};
 
-				if let Ok(response) = simple_ping(&mut stream).await
-					&& let Ok(server) = serde_json::from_str::<MinecraftServer>(&response)
-				{
-					let address = IpNet::from(Ipv4Net::from(address));
-
-					if server.has_opted_out() {
-						println!("Deleting server!");
-						database_clone.delete_server(address).await.unwrap();
-					}
-
-					let update_operation = ServerUpdateOperation {
-						server,
-						address,
-						port: port as i32,
-						timestamp: chrono::Utc::now().naive_utc().with_nanosecond(0).unwrap(),
-						database: database_clone,
-					};
-
-					update_operation.update_or_insert_server().await.unwrap();
-					update_operation.update_or_insert_players().await.unwrap();
-					update_operation.update_or_insert_mods().await.unwrap();
+				// Update server
+				if let Err(e) = insertion_operation.update_or_insert_server().await {
+					debug!("Error while updating server ({address}:{port}) in database: {e}")
 				}
-			});
+
+				// Update players
+				if let Err(e) = insertion_operation.update_or_insert_players().await {
+					debug!("Error while updating players ({address}:{port}) in database: {e}")
+				}
+
+				// Update mods
+				if let Err(e) = insertion_operation.update_or_insert_mods().await {
+					debug!("Error while updating mods ({address}:{port}) in database: {e}")
+				}
+			}
 		}
 	}
 }
