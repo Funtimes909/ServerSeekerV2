@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::types::Uuid;
 
+pub const ANONYMOUS_PLAYER_NAME: &str = "Anonymous Player";
 const OPT_OUT_CODE: &str = "§b§d§f§d§b";
-const ANONYMOUS_PLAYER_NAME: &str = "Anonymous Player";
 const FAKE_PLAYER_SAMPLE_MESSAGE: &str =
 	"To protect the privacy of this server and its\nusers, you must log in once to see ping data.";
 

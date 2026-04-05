@@ -1,6 +1,7 @@
 pub mod country_tracking;
 
-use std::str::FromStr;
+use crate::CONFIG;
+use crate::protocol::response::ANONYMOUS_PLAYER_NAME;
 
 use super::protocol::response::MinecraftServer;
 use chrono::NaiveDateTime;
@@ -192,15 +193,18 @@ impl ServerUpdateOperation {
 			let mut query_builder = QueryBuilder::new("INSERT INTO players ");
 
 			query_builder.push_values(player_sample, |mut b, player| {
-				// Ignore player if uuid fails to parse
-				if let Ok(parsed_uuid) = Uuid::from_str(&player.id) {
-					b.push_bind(self.address)
-						.push_bind(self.port)
-						.push_bind(parsed_uuid)
-						.push_bind(parsed_uuid.get_version_num() == 4)
-						.push_bind(&player.name)
-						.push_bind(self.timestamp)
-						.push_bind(self.timestamp);
+				// Disregard anonymous players if specified in the config
+				if CONFIG.scanner.ignore_fake_players && !player.name.eq(ANONYMOUS_PLAYER_NAME) {
+					// Ignore players that have invalid uuid's
+					if let Ok(uuid) = Uuid::parse_str(&player.id) {
+						b.push_bind(self.address)
+							.push_bind(self.port)
+							.push_bind(uuid)
+							.push_bind(uuid.get_version_num() == 4)
+							.push_bind(&player.name)
+							.push_bind(self.timestamp)
+							.push_bind(self.timestamp);
+					}
 				}
 			});
 
