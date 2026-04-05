@@ -6,19 +6,18 @@ use indicatif::{ProgressBar, ProgressStyle};
 use sqlx::{Row, types::ipnet::IpNet};
 
 use crate::{
-	config::ServerRescanPriority, database::{Database, ServerUpdateOperation}, protocol::{minecraft::simple_ping, response::MinecraftServer}
+	CONFIG, config::ServerRescanPriority, database::{Database, ServerUpdateOperation}, protocol::{minecraft::simple_ping, response::MinecraftServer}
 };
 
 pub struct Rescanner {
 	pub is_active: bool,
 	pub database: Database,
-	pub rescan_priority: ServerRescanPriority,
 }
 
 impl Rescanner {
 	#[rustfmt::skip]
 	pub async fn rescan_database(&self) {
-		let stream_order = match self.rescan_priority {
+		let stream_order = match CONFIG.scanner.rescan_priority {
 			ServerRescanPriority::OldestFirst => "ORDER BY lastseen ASC",
 			ServerRescanPriority::NewestFirst => "ORDER BY lastseen DESC",
 			ServerRescanPriority::LeastPlayers => "ORDER BY online_players ASC",

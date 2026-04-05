@@ -131,7 +131,6 @@ async fn main() {
 			let rescanner = Rescanner {
 				is_active: true,
 				database: Database { connection: pool },
-				rescan_priority: CONFIG.scanner.rescan_priority,
 			};
 
 			rescanner.rescan_database().await;
