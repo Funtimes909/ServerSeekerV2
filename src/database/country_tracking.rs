@@ -38,7 +38,7 @@ pub async fn run(pool: &PgPool) {
 			error!("Error while downloading countries database from ipinfo: {e}");
 		};
 
-		if let Err(e) = insert_records_to_database(&pool).await {
+		if let Err(e) = insert_records_to_database(pool).await {
 			error!("Error while inserting rows to countries table: {e}");
 		}
 	}

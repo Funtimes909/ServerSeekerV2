@@ -48,8 +48,8 @@ impl Rescanner {
 
             let database_clone = self.database.clone();
 
-            if let Ok(ping_response) = simple_ping(&mut stream).await {
-                if let Ok(server) = serde_json::from_str::<MinecraftServer>(&ping_response) {
+            if let Ok(ping_response) = simple_ping(&mut stream).await 
+                && let Ok(server) = serde_json::from_str::<MinecraftServer>(&ping_response) {
 
 					if server.has_opted_out() {
 						database_clone.delete_server(address).await.unwrap();
@@ -67,7 +67,6 @@ impl Rescanner {
 					update_operation.update_or_insert_players().await.unwrap();
 					update_operation.update_or_insert_mods().await.unwrap();
                 }
-            }
 
             bar.inc(1);
         }

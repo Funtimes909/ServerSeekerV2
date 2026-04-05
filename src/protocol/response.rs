@@ -117,17 +117,17 @@ impl MinecraftServer {
 		}
 
 		// Check for duplicate uuids
-		self.players.sample.as_ref().map(|a| {
+		if let Some(a) = &self.players.sample {
 			a.iter().for_each(|a| {
-				let uuid = Uuid::parse_str(&a.id).unwrap();
+				if let Ok(uuid) = Uuid::parse_str(&a.id) {
+					if seen_uuids.contains(&uuid) {
+						is_fake_sample = true
+					}
 
-				if seen_uuids.contains(&uuid) {
-					is_fake_sample = true
+					seen_uuids.insert(uuid);
 				}
-
-				seen_uuids.insert(uuid);
 			})
-		});
+		}
 
 		is_fake_sample
 	}

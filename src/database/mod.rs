@@ -4,10 +4,10 @@ use std::str::FromStr;
 
 use super::protocol::response::MinecraftServer;
 use chrono::NaiveDateTime;
-use sqlx::postgres::{PgArguments, PgQueryResult};
+use sqlx::postgres::PgQueryResult;
 use sqlx::types::Uuid;
 use sqlx::types::ipnet::IpNet;
-use sqlx::{Encode, Execute, Pool, Postgres, QueryBuilder, Row};
+use sqlx::{Pool, Postgres, QueryBuilder, Row};
 
 #[derive(Debug, Clone)]
 pub struct Database {
