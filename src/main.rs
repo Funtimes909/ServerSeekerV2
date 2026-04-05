@@ -25,7 +25,7 @@ use crate::scanning::rescanner::Rescanner;
 #[clap(rename_all = "kebab-case")]
 struct Args {
 	#[clap(help = "Specifies the mode to run")]
-	#[clap(default_value = "rescanner")]
+	#[clap(default_value = "scanner")]
 	#[clap(long, short = 'm')]
 	mode: Mode,
 
@@ -38,7 +38,7 @@ struct Args {
 #[derive(clap::ValueEnum, Clone, Debug, Default)]
 pub enum Mode {
 	#[default]
-	Scanning,
+	Scanner,
 	Rescanner,
 }
 
@@ -123,11 +123,11 @@ async fn main() {
 			}
 		}
 
-		country_tracking::run(&pool).await;
+		country_tracking::run(pool.clone()).await;
 	}
 
 	match arguments.mode {
-		Mode::Scanning => {
+		Mode::Scanner => {
 			let scanner = DiscoveryScanner {
 				database: Database { connection: pool },
 			};

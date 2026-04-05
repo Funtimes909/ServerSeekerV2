@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Deserialize;
 use sqlx::types::ipnet::IpNet;
-use sqlx::{PgPool, QueryBuilder};
+use sqlx::{PgPool, Pool, Postgres, QueryBuilder};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::str::FromStr;
@@ -25,23 +25,25 @@ struct CountryRow {
 	asn_name: Option<String>,
 }
 
-pub async fn run(pool: &PgPool) {
-	loop {
-		tokio::time::sleep(Duration::from_hours(
-			CONFIG.country_tracking.update_frequency,
-		))
-		.await;
+pub async fn run(pool: Pool<Postgres>) {
+	tokio::spawn(async move {
+		loop {
+			tokio::time::sleep(Duration::from_hours(
+				CONFIG.country_tracking.update_frequency,
+			))
+			.await;
 
-		info!("Updating out of date countries table");
+			info!("Updating out of date countries table");
 
-		if let Err(e) = download_ipinfo_json().await {
-			error!("Error while downloading countries database from ipinfo: {e}");
-		};
+			if let Err(e) = download_ipinfo_json().await {
+				error!("Error while downloading countries database from ipinfo: {e}");
+			};
 
-		if let Err(e) = insert_records_to_database(pool).await {
-			error!("Error while inserting rows to countries table: {e}");
+			if let Err(e) = insert_records_to_database(&pool).await {
+				error!("Error while inserting rows to countries table: {e}");
+			}
 		}
-	}
+	});
 }
 
 pub async fn download_ipinfo_json() -> anyhow::Result<()> {
