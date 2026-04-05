@@ -6,16 +6,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use sqlx::{Row, types::ipnet::IpNet};
 
 use crate::{
-	database::{Database, ServerUpdateOperation},
-	protocol::{minecraft::simple_ping, response::MinecraftServer},
+	config::ServerRescanPriority, database::{Database, ServerUpdateOperation}, protocol::{minecraft::simple_ping, response::MinecraftServer}
 };
-
-pub enum ServerRescanPriority {
-	OldestFirst,
-	NewestFirst,
-	LeastPlayers,
-	MostPlayers,
-}
 
 pub struct Rescanner {
 	pub is_active: bool,

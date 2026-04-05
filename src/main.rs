@@ -5,7 +5,7 @@ mod database;
 mod protocol;
 mod scanning;
 
-use chrono::{DateTime, Local, NaiveDate};
+use chrono::{DateTime, Local};
 use clap::Parser;
 use config::load_config;
 use lazy_static::lazy_static;
@@ -17,7 +17,7 @@ use tracing::{error, info};
 
 use crate::config::Config;
 use crate::database::{Database, country_tracking};
-use crate::scanning::rescanner::{Rescanner, ServerRescanPriority};
+use crate::scanning::rescanner::Rescanner;
 
 #[derive(Parser, Debug)]
 #[clap(about = "Scans the internet for minecraft servers and indexes them")]
@@ -131,7 +131,7 @@ async fn main() {
 			let rescanner = Rescanner {
 				is_active: true,
 				database: Database { connection: pool },
-				rescan_priority: ServerRescanPriority::OldestFirst,
+				rescan_priority: CONFIG.scanner.rescan_priority,
 			};
 
 			rescanner.rescan_database().await;

@@ -4,6 +4,14 @@ use std::fs::File;
 use std::io::{ErrorKind, Read};
 use tracing::error;
 
+#[derive(Deserialize, Clone, Copy, Debug)]
+pub enum ServerRescanPriority {
+	OldestFirst,
+	NewestFirst,
+	LeastPlayers,
+	MostPlayers,
+}
+
 #[derive(Deserialize, Clone, Debug)]
 pub struct Config {
 	pub database: Database,
@@ -28,6 +36,8 @@ pub struct ScannerConfig {
 	pub scan_delay: u64,
 	pub port_range_start: u16,
 	pub port_range_end: u16,
+	pub ignore_fake_players: bool,
+	pub rescan_priority: ServerRescanPriority,
 }
 
 #[derive(Deserialize, Clone, Debug)]

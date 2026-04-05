@@ -4,6 +4,8 @@ scan_delay = 60
 port_range_start = 25565
 port_range_end = 25565
 ignore_fake_players = true
+# Can be one of "OldestFirst", "NewestFirst", "LeastPlayers", "MostPlayers"
+rescan_priority = "OldestFirst"
 
 [masscan]
 # Location of masscans config file
