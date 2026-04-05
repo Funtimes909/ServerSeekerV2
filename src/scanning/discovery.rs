@@ -10,11 +10,11 @@ use crate::database::ServerUpdateOperation;
 use crate::database::Database;
 
 pub struct DiscoveryScanner {
-	database: Database,
+	pub database: Database,
 }
 
 impl DiscoveryScanner {
-	async fn scan(&self) {
+	pub async fn scan(&self) {
 		// Spawn masscan
 		let mut command = Command::new("sudo")
 			.args(["masscan", "-c", &CONFIG.masscan.config_file])

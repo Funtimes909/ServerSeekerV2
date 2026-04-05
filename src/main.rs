@@ -17,6 +17,7 @@ use tracing::{error, info};
 
 use crate::config::Config;
 use crate::database::{Database, country_tracking};
+use crate::scanning::discovery::DiscoveryScanner;
 use crate::scanning::rescanner::Rescanner;
 
 #[derive(Parser, Debug)]
@@ -126,7 +127,13 @@ async fn main() {
 	}
 
 	match arguments.mode {
-		Mode::Scanning => todo!(),
+		Mode::Scanning => {
+			let scanner = DiscoveryScanner {
+				database: Database { connection: pool },
+			};
+
+			scanner.scan().await;
+		}
 		Mode::Rescanner => {
 			let rescanner = Rescanner {
 				is_active: true,
