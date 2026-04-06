@@ -6,8 +6,8 @@ use tokio::process::Command;
 use tracing::debug;
 
 use crate::CONFIG;
-use crate::database::ServerUpdateOperation;
 use crate::database::Database;
+use crate::database::ServerUpdateOperation;
 
 pub struct DiscoveryScanner {
 	pub database: Database,
@@ -34,12 +34,6 @@ impl DiscoveryScanner {
 		while let Ok(Some(line)) = reader.next_line().await {
 			let mut line = line.split_whitespace();
 
-			// Address
-			let address = match line.nth(1).and_then(|a| Ipv4Addr::from_str(a).ok()) {
-				Some(address) => address,
-				_ => continue,
-			};
-
 			// Port
 			let port = match line
 				.nth(3)
@@ -49,6 +43,12 @@ impl DiscoveryScanner {
 				.and_then(|s| s.parse().ok())
 			{
 				Some(port) => port,
+				None => continue,
+			};
+
+			// Address
+			let address = match line.nth(1).and_then(|a| Ipv4Addr::from_str(a).ok()) {
+				Some(address) => address,
 				None => continue,
 			};
 

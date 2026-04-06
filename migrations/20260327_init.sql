@@ -1,7 +1,8 @@
 create table if not exists favicons (
     hash bytea primary key,
     data text not null,
-    first_seen timestamp without time zone not null default now ()
+    first_seen timestamp without time zone not null default now (),
+    last_seen timestamp without time zone not null default now ()
 );
 
 create table if not exists countries (
